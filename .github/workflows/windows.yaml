@@ -1,0 +1,51 @@
+name: Release Build
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: x86_64-pc-windows-msvc
+
+    - name: Build Release Binaries
+      run: |
+        cargo build --release --bin client
+        cargo build --release --bin server
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-binaries
+        path: |
+          target/release/client.exe
+          target/release/server.exe
+
+  create-release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: windows-binaries
+
+    - name: Create Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: ${{ github.ref_name }}
+        name: "Release ${{ github.ref_name }}"
+        artifacts: "client.exe,server.exe"
+        token: ${{ secrets.GITHUB_TOKEN }}
+        generateReleaseNotes: true

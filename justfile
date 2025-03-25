@@ -38,11 +38,16 @@ format:
 clippy:
     cargo clippy -- -D warnings
 
-run-both:
+run-both: build
     # Start server in background, save PID, wait 5s, run client, then kill server
-    cargo run --bin server -- --auth-port 5001 --game-port 5000 & 
+    ./target/release/server --auth-port 5001 --game-port 5000 & 
     echo $$ > server.pid 
-    sleep 10 
-    cargo run --bin client -- --auth-port 5001 --server 127.0.0.1 --client-port 4000
+    sleep 2 
+    ./target/release/client --auth-port 5001 --server 127.0.0.1 --client-port 4000 &
+    echo $$ > client1.pid
+    sleep 2
+    ./target/release/client --auth-port 5001 --server 127.0.0.1 --client-port 4001
     pkill -F server.pid
+    pkill -F client1.pid
     rm server.pid
+    rm client1.pid

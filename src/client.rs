@@ -2,6 +2,7 @@ mod config;
 mod player;
 mod player_input;
 mod protocol;
+mod world;
 
 use std::net::SocketAddr;
 
@@ -13,6 +14,7 @@ use lightyear::{connection::netcode::CONNECT_TOKEN_BYTES, prelude::*};
 use player::PlayerPlugin;
 use player_input::PlayerInputPlugin;
 use protocol::ProtocolPlugin;
+use world::WorldPlugin;
 
 #[derive(Parser)]
 struct ClientArgs {
@@ -49,8 +51,9 @@ impl Plugin for MyClientPlugin {
         app.add_plugins(build_client_plugin(self.auth_addr, self.client_addr));
         app.add_plugins(ProtocolPlugin);
         app.add_plugins(PlayerInputPlugin);
+        app.add_plugins(WorldPlugin { physics: false });
 
-        app.add_plugins(PlayerPlugin);
+        app.add_plugins(PlayerPlugin { physics: false });
         app.add_systems(Startup, connect_client);
     }
 }

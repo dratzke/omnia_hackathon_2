@@ -2,6 +2,7 @@ mod config;
 mod player;
 mod protocol;
 mod server_input;
+mod world;
 
 use std::{
     collections::HashMap,
@@ -11,6 +12,7 @@ use std::{
 
 use async_compat::Compat;
 use bevy::{prelude::*, tasks::IoTaskPool};
+use bevy_rapier3d::prelude::*;
 use clap::Parser;
 use config::shared_config;
 use lightyear::prelude::server::*;
@@ -23,6 +25,7 @@ use rand::{TryRngCore, rngs::OsRng};
 use server::{IoConfig, NetConfig, NetcodeConfig, ServerCommands, ServerConfig, ServerPlugins};
 use server_input::ServerInputPlugin;
 use tokio::io::AsyncWriteExt;
+use world::WorldPlugin;
 
 #[derive(Parser)]
 struct ServerArgs {
@@ -74,8 +77,10 @@ impl Plugin for ServerPlugin {
             self.private_key,
         ));
         app.add_plugins(ProtocolPlugin);
-        app.add_plugins(PlayerPlugin);
+        app.add_plugins(PlayerPlugin { physics: true });
         app.add_plugins(ServerInputPlugin);
+        app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());
+        app.add_plugins(WorldPlugin { physics: true });
 
         app.add_systems(Startup, start_server);
         app.insert_resource(ClientIds(client_ids.clone()));
@@ -142,7 +147,14 @@ fn handle_connect_event(
         info!("client logged in");
         let entity = commands
             .spawn(PlayerBundle {
-                position: PlayerPosition(Vec3::ZERO),
+                position: PlayerPosition(
+                    Vec3::new(
+                        rand::random_range(-5.0..5.0),
+                        rand::random_range(-5.0..5.0),
+                        rand::random_range(-5.0..5.0),
+                    ),
+                    Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0),
+                ),
                 color: PlayerColor(Color::oklab(0.50, -0.03, -0.09)),
             })
             .insert(Replicate {

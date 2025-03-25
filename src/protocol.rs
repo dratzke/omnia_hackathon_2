@@ -5,11 +5,11 @@ use lightyear::prelude::*;
 pub struct PlayerId(pub ClientId);
 
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct PlayerPosition(pub Vec3);
+pub struct PlayerPosition(pub Vec3, pub Quat);
 
 impl Linear for PlayerPosition {
     fn lerp(start: &Self, other: &Self, t: f32) -> Self {
-        Self(start.0 * (1.0 - t) + other.0 * t)
+        Self(start.0 * (1.0 - t) + other.0 * t, start.1)
     }
 }
 

@@ -14,6 +14,7 @@ path = "src/client.rs"
 [dependencies]
 async-compat = "0.2.4"
 bevy = "0.15.3"
+bevy_rapier3d = "0.29.0"
 clap = { version = "4.5.32", features = ["derive"] }
 lightyear = "0.19.0"
 rand = "0.9.0"

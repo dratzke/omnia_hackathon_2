@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
 use lightyear::prelude::*;
 use server::InputEvent;
 
@@ -11,13 +12,13 @@ pub struct ServerInputPlugin;
 
 impl Plugin for ServerInputPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, movement);
-        app.add_systems(Update, sync_positions);
+        app.add_systems(Update, movement);
+        app.add_systems(PostUpdate, sync_positions);
     }
 }
 
 fn movement(
-    mut position_query: Query<&mut PlayerPosition>,
+    mut position_query: Query<&mut Velocity>,
     mut input_reader: EventReader<InputEvent<Inputs>>,
     client_ids: Res<ClientIds>,
 ) {
@@ -34,30 +35,30 @@ fn movement(
     }
 }
 
-fn shared_movement_behaviour(mut position: Mut<PlayerPosition>, input: &Inputs) {
+fn shared_movement_behaviour(mut position: Mut<Velocity>, input: &Inputs) {
     const MOVE_SPEED: f32 = 0.1;
     match input {
         Inputs::Direction(direction) => {
-            dbg!(direction);
+            dbg!(&position);
             if direction.forward {
-                position.0.x += MOVE_SPEED;
+                position.linvel.x += MOVE_SPEED;
             }
             if direction.back {
-                position.0.x -= MOVE_SPEED;
+                position.linvel.x -= MOVE_SPEED;
             }
             if direction.left {
-                position.0.z -= MOVE_SPEED;
+                position.linvel.z -= MOVE_SPEED;
             }
             if direction.right {
-                position.0.z += MOVE_SPEED;
+                position.linvel.z += MOVE_SPEED;
             }
         }
         _ => {}
     }
 }
 
-fn sync_positions(mut players: Query<(&mut Transform, &PlayerPosition)>) {
-    for (mut transform, position) in players.iter_mut() {
-        *transform = transform.with_translation(position.0);
+fn sync_positions(mut players: Query<(&mut PlayerPosition, &Transform)>) {
+    for (mut position, transform) in players.iter_mut() {
+        *position = PlayerPosition(transform.translation, transform.rotation);
     }
 }

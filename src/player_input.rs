@@ -46,6 +46,8 @@ fn handle_input(
 
 fn sync_positions(mut players: Query<(&mut Transform, &PlayerPosition)>) {
     for (mut transform, position) in players.iter_mut() {
-        *transform = transform.with_translation(position.0);
+        *transform = transform
+            .with_translation(position.0)
+            .with_rotation(position.1);
     }
 }

@@ -53,8 +53,10 @@ jobs:
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
-        tag: ${{ github.ref_name }}
+        tag: ${{ steps.commit_hash.outputs.hash }}
         name: "Release ${{ steps.commit_hash.outputs.hash }}"
         artifacts: "client.exe,server.exe"
+        replacesArtifacts: true
+        allowUpdates: true
         token: ${{ secrets.GITHUB_TOKEN }}
         generateReleaseNotes: true

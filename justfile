@@ -12,11 +12,11 @@ build:
 
 # Run the server binary
 server:
-    cargo run --bin server --release
+    cargo run --bin server --release -- --auth-port 5001 --game-port 5000
 
 # Run the client binary
 client:
-    cargo run --bin client --release
+    cargo run --bin client --release -- --auth-port 5001 --server 127.0.0.1 --client-port 4000
 
 # Clean the project
 clean:
@@ -24,7 +24,7 @@ clean:
 
 # Run tests for all binaries
 test:
-    cargo test
+    cargo test --release
 
 # Check code formatting
 format-check:

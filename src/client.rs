@@ -2,6 +2,8 @@ mod config;
 mod player;
 mod player_input;
 mod protocol;
+mod track_gen;
+mod track_mesh;
 mod world;
 
 use std::net::SocketAddr;

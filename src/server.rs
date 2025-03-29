@@ -2,6 +2,8 @@ mod config;
 mod player;
 mod protocol;
 mod server_input;
+mod track_gen;
+mod track_mesh;
 mod world;
 
 use std::{
@@ -12,6 +14,7 @@ use std::{
 
 use async_compat::Compat;
 use bevy::{prelude::*, tasks::IoTaskPool};
+use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 use bevy_rapier3d::prelude::*;
 use clap::Parser;
 use config::shared_config;
@@ -81,6 +84,7 @@ impl Plugin for ServerPlugin {
         app.add_plugins(ServerInputPlugin);
         app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());
         app.add_plugins(WorldPlugin { physics: true });
+        app.add_plugins(PanOrbitCameraPlugin);
 
         app.add_systems(Startup, start_server);
         app.insert_resource(ClientIds(client_ids.clone()));
@@ -127,7 +131,7 @@ fn build_server_plugin(game_server_addr: u16, key: Key) -> ServerPlugins {
 fn start_server(mut commands: Commands) {
     commands.start_server();
     commands.spawn((
-        Camera3d::default(),
+        PanOrbitCamera::default(),
         Transform::from_xyz(-2.5, 4.5, 9.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 }

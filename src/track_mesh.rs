@@ -33,29 +33,56 @@ fn generate_straight_mesh(length: f32) -> Mesh {
     let half_width = TRACK_WIDTH / 2.0;
 
     // Vertices: 4 corners of the rectangle
-    let vertices = vec![
+    let mut vertices = vec![
         [-half_width, 0.0, 0.0],    // Bottom left
         [half_width, 0.0, 0.0],     // Bottom right
         [half_width, 0.0, length],  // Top right
         [-half_width, 0.0, length], // Top left
     ];
 
+    vertices.extend(vec![
+        [-half_width, 3.0, 0.0],    // Bottom left
+        [half_width, 3.0, 0.0],     // Bottom right
+        [half_width, 3.0, length],  // Top right
+        [-half_width, 3.0, length], // Top left
+    ]);
+
+    // 4 5
+    // 7 6
+
+    // 0 1
+    // 3 2
+
     // Indices: 2 triangles forming a quad
-    let indices = vec![
+    let mut indices = vec![
         0, 2, 1, // First triangle
         0, 3, 2, // Second triangle
     ];
 
-    // UVs: simple mapping for a rectangle
-    let uvs = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    indices.extend(vec![
+        0, 4, 7, // top left
+        0, 7, 3, // bottom left
+        1, 6, 5, // top right
+        1, 2, 6, // bottom right
+    ]);
 
+    // UVs: simple mapping for a rectangle
+    let mut uvs = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    uvs.extend(vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
     // Normals: all pointing up (Y+)
-    let normals = vec![
+    let mut normals = vec![
         [0.0, 1.0, 0.0],
         [0.0, 1.0, 0.0],
         [0.0, 1.0, 0.0],
         [0.0, 1.0, 0.0],
     ];
+
+    normals.extend(vec![
+        [0.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+    ]);
 
     create_mesh_from_attributes(vertices, indices, uvs, normals)
 }

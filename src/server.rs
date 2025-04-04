@@ -148,17 +148,11 @@ fn handle_connect_event(
     mut commands: Commands,
 ) {
     if let Netcode(client_id) = trigger.event().client_id {
+        let pos = Vec3::new(0.0, rand::random_range(5.0..9.0), 4.0);
         info!("client logged in");
         let entity = commands
             .spawn(PlayerBundle {
-                position: PlayerPosition(
-                    Vec3::new(
-                        rand::random_range(-5.0..5.0),
-                        rand::random_range(-5.0..5.0),
-                        rand::random_range(-5.0..5.0),
-                    ),
-                    Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0),
-                ),
+                position: PlayerPosition(pos, Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0)),
                 color: PlayerColor(Color::oklab(0.50, -0.03, -0.09)),
             })
             .insert(Replicate {

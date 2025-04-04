@@ -25,9 +25,9 @@ fn attach_player_model(
     physics: Res<Physics>,
 ) {
     for (position, color, entity) in player_query.iter() {
-        info!("attach palyer model");
+        info!(position=?position,"attach palyer model");
         commands.get_entity(entity).unwrap().insert((
-            Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+            Mesh3d(meshes.add(Sphere::new(0.5))),
             MeshMaterial3d(materials.add(color.0)),
             Transform::from_xyz(position.0.x, position.0.y, position.0.z),
         ));
@@ -35,9 +35,8 @@ fn attach_player_model(
             commands
                 .get_entity(entity)
                 .unwrap()
-                .insert(Collider::cuboid(1.0, 1.0, 1.0))
+                .insert(Collider::ball(0.5))
                 .insert(Restitution::coefficient(0.7))
-                .insert(Transform::from_xyz(0.0, 4.0, 0.0))
                 .insert(RigidBody::Dynamic)
                 .insert(Velocity {
                     linvel: Vec3::new(0.0, 0.0, 0.0),

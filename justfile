@@ -43,9 +43,9 @@ run-both: build
     ./target/release/server --auth-port 5001 --game-port 5000 & 
     echo $$ > server.pid 
     sleep 2 
-    ./target/release/client --auth-port 5001 --server 127.0.0.1 --client-port 4000 &
-    echo $$ > client1.pid
-    sleep 2
+    # ./target/release/client --auth-port 5001 --server 127.0.0.1 --client-port 4000 &
+    # echo $$ > client1.pid
+    # sleep 2
     ./target/release/client --auth-port 5001 --server 127.0.0.1 --client-port 4001
     pkill -F server.pid
     pkill -F client1.pid

@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use noise::{NoiseFn, Perlin};
-use rand::random;
 use std::f32::consts::PI;
 
 #[derive(Debug, Clone, Copy)]
@@ -91,19 +90,34 @@ impl Track {
         match (noise_value * 2.0).abs() {
             v if v < 0.3 => BlockType::Straight { length: 10.0 },
             v if v < 0.6 => BlockType::Turn {
-                angle: PI * rand::random_range(0.3..1.0),
+                angle: PI
+                    * (self.noise.get([
+                        self.current_end.position.x as f64 * 0.3,
+                        self.current_end.position.y as f64 * 0.3,
+                    ]) as f32)
+                    + 0.3,
                 radius: self.turn_radius(),
             },
             _ => BlockType::Slope {
                 length: 15.0,
-                height_change: -rand::random_range(10.0..40.0),
+                height_change: -((self.noise.get([
+                    self.current_end.position.y as f64 * 0.3,
+                    self.current_end.position.x as f64 * 0.3,
+                ]) as f32)
+                    * 10.0
+                    + 10.0),
             },
         }
     }
 
     fn turn_radius(&self) -> f32 {
         // if rand::random_bool(0.5) {
-        rand::random_range(10.0..30.0)
+        (self.noise.get([
+            self.current_end.position.y as f64 * 0.3,
+            self.current_end.position.x as f64 * 0.3,
+        ]) as f32)
+            * 20.0
+            + 10.0
         // } else {
         // rand::random_range(-30.0..-10.0)
         // }
@@ -133,7 +147,6 @@ impl Track {
 
                 let position_offset =
                     rotate_point_around(Vec2::ZERO, Vec2::new(*radius, 0.0), -angle);
-                dbg!(position_offset);
                 let position = self.current_end.position
                     + self.current_end.rotation
                         * Vec3::new(position_offset.x, 0.0, position_offset.y);

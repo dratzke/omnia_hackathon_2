@@ -35,24 +35,24 @@ fn spawn_world(
             ..default()
         },
     ));
-    // let mut e = commands.spawn((
-    //     Mesh3d(meshes.add(Cuboid::new(100.0, 0.1, 100.0))),
-    //     MeshMaterial3d(materials.add(Color::oklab(0.74, -0.12, 0.11))),
-    // ));
-    // e.insert(Transform::from_xyz(0.0, -2.0, 0.0));
-    // if physics.0 {
-    //     e.insert(Collider::cuboid(100.0, 0.1, 100.0));
-    // }
     let track = Track::generate(1234, 30.0);
     // let track = Track::debug_straight();
     for segment in track.segments {
         let lum = rand::random_range(0.0..1.0);
-        commands.spawn((
-            Mesh3d(meshes.add(generate_mesh_for_block(segment.block_type))),
+        let m = generate_mesh_for_block(segment.block_type);
+        let collider =
+            Collider::from_bevy_mesh(&m, &ComputedColliderShape::TriMesh(TriMeshFlags::all()))
+                .unwrap();
+        let mut e = commands.spawn((
+            Mesh3d(meshes.add(m)),
             MeshMaterial3d(materials.add(Color::oklab(lum, -0.12, 0.11))),
             Transform::IDENTITY
                 .with_translation(segment.transform.position)
                 .with_rotation(segment.transform.rotation),
         ));
+
+        if physics.0 {
+            e.insert(collider);
+        }
     }
 }

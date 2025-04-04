@@ -109,32 +109,51 @@ fn generate_turn_mesh(angle: f32, radius: f32) -> Mesh {
             Vec2::new(radius, 0.0),
             -segment_angle,
         );
-
-        vertices.push([inner.x, 0.0, inner.y]);
-        uvs.push([i as f32 / segments as f32, 0.0]);
-        normals.push([0.0, 1.0, 0.0]);
-
         let outer = rotate_point_around(
             Vec2::new(TRACK_WIDTH / 2.0, 0.0),
             Vec2::new(radius, 0.0),
             -segment_angle,
         );
 
+        vertices.push([inner.x, 0.0, inner.y]);
+        vertices.push([inner.x, 3.0, inner.y]);
         vertices.push([outer.x, 0.0, outer.y]);
-        // Outer vertex
+        vertices.push([outer.x, 3.0, outer.y]);
+        uvs.push([i as f32 / segments as f32, 0.0]);
+        uvs.push([i as f32 / segments as f32, 0.0]);
         uvs.push([i as f32 / segments as f32, 1.0]);
+        uvs.push([i as f32 / segments as f32, 1.0]);
+        normals.push([0.0, 1.0, 0.0]);
+        normals.push([0.0, 1.0, 0.0]);
+        normals.push([0.0, 1.0, 0.0]);
         normals.push([0.0, 1.0, 0.0]);
 
         // Add indices for the quad (two triangles)
         if i < segments {
-            let base_index = i * 2;
-            indices.push(base_index);
-            indices.push(base_index + 3);
-            indices.push(base_index + 1);
+            let base_index = i * 4;
+            indices.push(base_index + 0); // Current inner floor vertex
+            indices.push(base_index + 4); // Next inner floor vertex
+            indices.push(base_index + 2); // Current outer floor vertex
 
-            indices.push(base_index);
-            indices.push(base_index + 2);
-            indices.push(base_index + 3);
+            indices.push(base_index + 2); // Current outer floor vertex
+            indices.push(base_index + 4); // Next inner floor vertex
+            indices.push(base_index + 6); // Next outer floor vertex
+
+            indices.push(base_index + 0); // Current inner floor
+            indices.push(base_index + 1); // Current inner ceiling
+            indices.push(base_index + 4); // Next inner floor
+
+            indices.push(base_index + 1); // Current inner ceiling
+            indices.push(base_index + 5); // Next inner ceiling
+            indices.push(base_index + 4); // Next inner floor
+
+            indices.push(base_index + 2); // Current outer floor
+            indices.push(base_index + 6); // Next outer floor
+            indices.push(base_index + 3); // Current outer ceiling
+
+            indices.push(base_index + 3); // Current outer ceiling
+            indices.push(base_index + 6); // Next outer floor
+            indices.push(base_index + 7); // Next outer ceiling
         }
     }
 

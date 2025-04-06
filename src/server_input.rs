@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use lightyear::prelude::*;
@@ -35,21 +37,24 @@ fn movement(
     }
 }
 
-fn shared_movement_behaviour(mut position: Mut<Velocity>, input: &Inputs) {
-    const MOVE_SPEED: f32 = 0.1;
+fn shared_movement_behaviour(mut velocity: Mut<Velocity>, input: &Inputs) {
+    let lin = velocity.linvel.normalize();
+
     match input {
         Inputs::Direction(direction) => {
             if direction.forward {
-                position.linvel.x += MOVE_SPEED;
+                velocity.linvel += lin * 0.1;
             }
             if direction.back {
-                position.linvel.x -= MOVE_SPEED;
+                velocity.linvel -= lin * 0.1;
             }
             if direction.left {
-                position.linvel.z -= MOVE_SPEED;
+                let rotated = Quat::from_rotation_y(PI * 0.5) * lin;
+                velocity.linvel += rotated * 0.1;
             }
             if direction.right {
-                position.linvel.z += MOVE_SPEED;
+                let rotated = Quat::from_rotation_y(PI * 0.5) * lin;
+                velocity.linvel -= rotated * 0.1;
             }
         }
         _ => {}

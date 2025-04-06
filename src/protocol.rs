@@ -70,8 +70,10 @@ impl Plugin for ProtocolPlugin {
 }
 
 fn on_player_spawn(t: Trigger<ClientEntitySpawnEvent>) {
+    info!("player spawn event client");
     dbg!(t.event().entity());
 }
 fn on_player_spawn2(t: Trigger<ServerEntitySpawnEvent>) {
+    info!("player spawn event server");
     dbg!(t.event().entity());
 }

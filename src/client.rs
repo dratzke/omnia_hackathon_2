@@ -1,3 +1,4 @@
+mod client_cam;
 mod config;
 mod player;
 mod player_input;
@@ -11,6 +12,7 @@ use std::net::SocketAddr;
 use bevy::prelude::*;
 use clap::Parser;
 use client::{Authentication, ClientCommands, ClientPlugins, IoConfig, NetConfig};
+use client_cam::{ClientCameraPlugin, DirectionalCamera};
 use config::shared_config;
 use lightyear::{connection::netcode::CONNECT_TOKEN_BYTES, prelude::*};
 use player::PlayerPlugin;
@@ -54,6 +56,7 @@ impl Plugin for MyClientPlugin {
         app.add_plugins(ProtocolPlugin);
         app.add_plugins(PlayerInputPlugin);
         app.add_plugins(WorldPlugin { physics: false });
+        app.add_plugins(ClientCameraPlugin);
 
         app.add_plugins(PlayerPlugin { physics: false });
         app.add_systems(Startup, connect_client);
@@ -64,6 +67,7 @@ fn connect_client(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(-2.5, 4.5, 9.0).looking_at(Vec3::ZERO, Vec3::Y),
+        DirectionalCamera::default(),
     ));
     commands.connect_client();
 }

@@ -39,7 +39,6 @@ fn shared_movement_behaviour(mut position: Mut<Velocity>, input: &Inputs) {
     const MOVE_SPEED: f32 = 0.1;
     match input {
         Inputs::Direction(direction) => {
-            dbg!(&position);
             if direction.forward {
                 position.linvel.x += MOVE_SPEED;
             }

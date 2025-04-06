@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
+use lightyear::prelude::client::Predicted;
 
 use crate::protocol::{PlayerColor, PlayerPosition};
 
@@ -7,7 +8,7 @@ pub struct PlayerPlugin {
     pub physics: bool,
 }
 
-#[derive(Resource)]
+#[derive(Resource, Debug)]
 struct Physics(bool);
 
 impl Plugin for PlayerPlugin {
@@ -18,19 +19,25 @@ impl Plugin for PlayerPlugin {
 }
 
 fn attach_player_model(
-    player_query: Query<(&PlayerPosition, &PlayerColor, Entity), Without<Transform>>,
+    player_query: Query<
+        (&PlayerPosition, &PlayerColor, Entity),
+        (Without<Transform>, Without<Predicted>),
+    >,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     physics: Res<Physics>,
 ) {
+    let mut c = 0;
     for (position, color, entity) in player_query.iter() {
-        info!(position=?position,"attach palyer model");
+        c += 1;
+        info!(position=?position, phys=?physics,"attach player model");
         commands.get_entity(entity).unwrap().insert((
             Mesh3d(meshes.add(Sphere::new(0.5))),
             MeshMaterial3d(materials.add(color.0)),
-            Transform::from_xyz(position.0.x, position.0.y, position.0.z),
+            Transform::from_translation(position.0),
         ));
+        commands.get_entity(entity).unwrap().log_components();
         if physics.0 {
             commands
                 .get_entity(entity)
@@ -44,6 +51,9 @@ fn attach_player_model(
                 })
                 .insert(GravityScale(1.0));
         }
+    }
+    if c != 0 {
+        dbg!(c);
     }
 }
 

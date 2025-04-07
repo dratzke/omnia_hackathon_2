@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use lightyear::prelude::client::Predicted;
 
-use crate::protocol::{PlayerColor, PlayerPosition};
+use crate::{
+    protocol::{PlayerColor, PlayerPosition},
+    world::{LastTouchedId, LastTouchedTime},
+};
 
 pub struct PlayerPlugin {
     pub physics: bool,
@@ -45,11 +48,14 @@ fn attach_player_model(
                 .insert(Collider::ball(0.5))
                 .insert(Restitution::coefficient(0.7))
                 .insert(RigidBody::Dynamic)
+                .insert(ActiveEvents::COLLISION_EVENTS)
                 .insert(Velocity {
                     linvel: Vec3::new(0.0, 0.0, 0.0),
                     angvel: Vec3::new(0.0, 0.0, 0.0),
                 })
-                .insert(GravityScale(1.0));
+                .insert(GravityScale(1.0))
+                .insert(LastTouchedId(0))
+                .insert(LastTouchedTime(0.0, false));
         }
     }
     if c != 0 {

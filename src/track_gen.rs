@@ -87,17 +87,19 @@ impl Track {
     fn select_next_block(&self) -> BlockType {
         let noise_value = self.noise.get([self.segments.len() as f64 * 0.3, 0.0]);
 
-        match (noise_value * 2.0).abs() {
+        match (noise_value).abs() {
             v if v < 0.3 => BlockType::Straight { length: 10.0 },
-            v if v < 0.6 => BlockType::Turn {
-                angle: PI
-                    * (self.noise.get([
-                        self.current_end.position.x as f64 * 0.3,
-                        self.current_end.position.y as f64 * 0.3,
-                    ]) as f32)
-                    + 0.3,
-                radius: self.turn_radius(),
-            },
+            v if v < 0.6 => {
+                let r = (self.noise.get([
+                    self.current_end.position.x as f64 * 0.3,
+                    self.current_end.position.y as f64 * 0.3,
+                ]) as f32)
+                    .abs();
+                BlockType::Turn {
+                    angle: PI * r + 0.3,
+                    radius: self.turn_radius(),
+                }
+            }
             _ => BlockType::Slope {
                 length: 15.0,
                 height_change: -((self.noise.get([
@@ -112,12 +114,12 @@ impl Track {
 
     fn turn_radius(&self) -> f32 {
         // if rand::random_bool(0.5) {
-        (self.noise.get([
+        let r = (self.noise.get([
             self.current_end.position.y as f64 * 0.3,
             self.current_end.position.x as f64 * 0.3,
         ]) as f32)
-            * 20.0
-            + 10.0
+            .abs();
+        r * 20.0 + 10.0
         // } else {
         // rand::random_range(-30.0..-10.0)
         // }

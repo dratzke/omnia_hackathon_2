@@ -1,11 +1,11 @@
 * track generation corners should go in the direction of the track not against it (/)
 * track generation should not go into itself
 * start the physics once all players joined
-* register how far players moved (last track touched)
+* register how far players moved (last track touched) (/)
 * register who finished when
 * grpc api to interact with client
 * take screenshots for clients if api controlled
-* only allow input when ground was recently touched
+* only allow input when ground was recently touched (/)
 * banked turns
 * modifier surfaces (friction, acceleration)
 * air resitance to limit max speed

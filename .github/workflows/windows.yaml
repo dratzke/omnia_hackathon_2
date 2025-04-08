@@ -29,8 +29,40 @@ jobs:
           target/release/client.exe
           target/release/server.exe
 
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: x86_64-unknown-linux-gnu
+
+    - name: Install Linux dependencies
+      shell: bash
+      if: ${{ runner.os == 'linux' }}
+      run: >
+        sudo apt-get update
+
+        sudo apt-get install --no-install-recommends 'libasound2-dev' 'libudev-dev' 'libwayland-dev' 'libxkbcommon-dev'
+
+    - name: Build Release Binaries
+      run: |
+        cargo build --release --bin client
+        cargo build --release --bin server
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-binaries
+        path: |
+          target/release/client
+          target/release/server
+
   create-release:
-    needs: build-windows
+    needs: [build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -45,17 +77,24 @@ jobs:
       id: commit_hash
       run: echo "hash=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-    - name: Download Artifacts
+    - name: Download Windows Artifacts
       uses: actions/download-artifact@v4
       with:
         name: windows-binaries
+        path: windows
+
+    - name: Download Linux Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-binaries
+        path: linux
 
     - name: Create Release
       uses: ncipollo/release-action@v1
       with:
         tag: ${{ steps.commit_hash.outputs.hash }}
         name: "Release ${{ steps.commit_hash.outputs.hash }}"
-        artifacts: "client.exe,server.exe"
+        artifacts: "windows/client.exe,windows/server.exe,linux/client,linux/server"
         replacesArtifacts: true
         allowUpdates: true
         token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,14 @@
+syntax = "proto3";
+package marble;
+
+message GetStateRequest{
+}
+
+message StateResponse{
+  bytes screen = 1;
+}
+
+service MarbleService {
+  rpc GetState(GetStateRequest) returns (StateResponse);
+}
+

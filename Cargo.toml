@@ -15,9 +15,11 @@ path = "src/client.rs"
 approx = "0.5.1"
 async-compat = "0.2.4"
 bevy = "0.15.3"
+bevy_image_export = { git = "https://github.com/julianbieber/bevy_image_export.git", rev = "2dfa04c15119f3fe9b7fb7f8678df6c45c5bf3a0"}
 bevy_panorbit_camera = "0.25.0"
 bevy_rapier3d = "0.29.0"
 clap = { version = "4.5.32", features = ["derive"] }
+image = "0.25.5"
 lightyear = "0.19.0"
 noise = "0.9.0"
 prost = "0.13.5"

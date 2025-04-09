@@ -38,6 +38,12 @@ format:
 clippy:
     cargo clippy -- -D warnings
 
+run-both-grpc: build
+    ./target/release/server --auth-port 5001 --game-port 5000 & 
+    echo $$ > server.pid 
+    sleep 2 
+    ./target/release/client --auth-port 5001 --server 127.0.0.1 --client-port 4000 --grpc-port 50051
+
 run-both: build
     # Start server in background, save PID, wait 5s, run client, then kill server
     ./target/release/server --auth-port 5001 --game-port 5000 & 

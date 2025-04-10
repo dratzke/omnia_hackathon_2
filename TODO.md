@@ -3,7 +3,7 @@
 * start the physics once all players joined
 * register how far players moved (last track touched) (/)
 * register who finished when
-* grpc api to interact with client
+* grpc api to interact with client (/)
 * take screenshots for clients if api controlled (/)
 * only allow input when ground was recently touched (/)
 * banked turns block
@@ -15,8 +15,8 @@
 * modifier pickup (magnet, ?)
 * bumpy road block
 * smooth movement
-* grpc reflection
-* fix controll in air for 1s
+* grpc reflection (/)
+* fix controll in air for 1s (/)
 * smooth up/down block
 * increased gravity modifier
 * images per player on server

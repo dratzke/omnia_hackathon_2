@@ -1,7 +1,11 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
-use crate::{protocol::PlayerPosition, track_gen::Track, track_mesh::generate_mesh_for_block};
+use crate::{
+    protocol::PlayerPosition,
+    track_gen::{RoadType, Track},
+    track_mesh::generate_mesh_for_block,
+};
 
 pub struct WorldPlugin {
     pub physics: bool,
@@ -55,9 +59,13 @@ fn spawn_world(
         let collider =
             Collider::from_bevy_mesh(&m, &ComputedColliderShape::TriMesh(TriMeshFlags::all()))
                 .unwrap();
+        let color = match segment.road_type {
+            RoadType::Asphalt => Color::oklab(lum, -0.12, 0.11),
+            RoadType::Ice => Color::oklab(lum, -0.03, -0.09),
+        };
         let mut e = commands.spawn((
             Mesh3d(meshes.add(m)),
-            MeshMaterial3d(materials.add(Color::oklab(lum, -0.12, 0.11))),
+            MeshMaterial3d(materials.add(color)),
             Transform::IDENTITY
                 .with_translation(segment.transform.position)
                 .with_rotation(segment.transform.rotation),
@@ -65,7 +73,18 @@ fn spawn_world(
         ));
 
         if physics.0 {
-            e.insert((collider, ActiveEvents::COLLISION_EVENTS));
+            let friciton = match segment.road_type {
+                crate::track_gen::RoadType::Asphalt => 1.0,
+                crate::track_gen::RoadType::Ice => 0.3,
+            };
+            e.insert((
+                collider,
+                ActiveEvents::COLLISION_EVENTS,
+                Friction {
+                    coefficient: friciton,
+                    combine_rule: CoefficientCombineRule::Min,
+                },
+            ));
         }
     }
 }

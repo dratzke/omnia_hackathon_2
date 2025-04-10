@@ -53,6 +53,10 @@ fn attach_player_model(
                     linvel: Vec3::new(0.0, 0.0, 0.0),
                     angvel: Vec3::new(0.0, 0.0, 0.0),
                 })
+                .insert(ExternalForce {
+                    force: Vec3::ZERO,
+                    torque: Vec3::ZERO,
+                })
                 .insert(GravityScale(1.0))
                 .insert(LastTouchedId(0))
                 .insert(LastTouchedTime(0.0, false));

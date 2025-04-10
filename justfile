@@ -59,10 +59,12 @@ run-both: build
     rm client1.pid
 
 fowrard:
-    grpcurl -d '{"forward": true, "back": false, "left": false, "right": false}' -plaintext '[::1]:50051' marble.MarbleService/Input
+    grpcurl -d '{"forward": true, "back": false, "left": false, "right": false, "reset": false}' -plaintext '[::1]:50051' marble.MarbleService/Input
 back:
-    grpcurl -d '{"forward": false, "back": true, "left": false, "right": false}' -plaintext '[::1]:50051' marble.MarbleService/Input
+    grpcurl -d '{"forward": false, "back": true, "left": false, "right": false, "reset": false}' -plaintext '[::1]:50051' marble.MarbleService/Input
 left:
-    grpcurl -d '{"forward": false, "back": false, "left": true, "right": false}' -plaintext '[::1]:50051' marble.MarbleService/Input
+    grpcurl -d '{"forward": false, "back": false, "left": true, "right": false, "reset": false}' -plaintext '[::1]:50051' marble.MarbleService/Input
 right:
-    grpcurl -d '{"forward": false, "back": false, "left": false, "right": true}' -plaintext '[::1]:50051' marble.MarbleService/Input
+    grpcurl -d '{"forward": false, "back": false, "left": false, "right": true, "reset": false}' -plaintext '[::1]:50051' marble.MarbleService/Input
+reset:
+    grpcurl -d '{"forward": false, "back": false, "left": false, "right": true, "reset": false}' -plaintext '[::1]:50051' marble.MarbleService/Input

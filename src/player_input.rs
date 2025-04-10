@@ -35,6 +35,7 @@ fn handle_input(
             back: false,
             left: false,
             right: false,
+            reset: false,
         };
         if keypress.pressed(KeyCode::KeyW) || keypress.pressed(KeyCode::ArrowUp) {
             direction.forward = true;
@@ -47,6 +48,9 @@ fn handle_input(
         }
         if keypress.pressed(KeyCode::KeyD) || keypress.pressed(KeyCode::ArrowRight) {
             direction.right = true;
+        }
+        if keypress.pressed(KeyCode::Space) {
+            direction.reset = true;
         }
         if direction.is_some() {
             input = Inputs::Direction(direction);

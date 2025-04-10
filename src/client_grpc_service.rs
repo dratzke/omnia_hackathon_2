@@ -30,6 +30,7 @@ impl GRPCService {
             back: r.back,
             left: r.left,
             right: r.right,
+            reset: r.reset,
         };
         let i = if d.is_some() {
             Inputs::Direction(d)

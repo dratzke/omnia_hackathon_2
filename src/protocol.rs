@@ -22,11 +22,12 @@ pub struct Direction {
     pub back: bool,
     pub left: bool,
     pub right: bool,
+    pub reset: bool,
 }
 
 impl Direction {
     pub fn is_some(self) -> bool {
-        self.forward || self.back || self.left || self.right
+        self.forward || self.back || self.left || self.right || self.reset
     }
 }
 

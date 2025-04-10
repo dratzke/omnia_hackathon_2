@@ -15,4 +15,3 @@
 * bumpy road block
 * bumpy ride
 * python framework
-* break button to stop all rotation

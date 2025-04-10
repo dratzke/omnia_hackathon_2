@@ -21,7 +21,7 @@ impl Plugin for ServerInputPlugin {
 }
 
 fn movement(
-    mut position_query: Query<(&Velocity, &mut ExternalForce, &LastTouchedTime)>,
+    mut position_query: Query<(&mut Velocity, &mut ExternalForce, &LastTouchedTime)>,
     mut input_reader: EventReader<InputEvent<Inputs>>,
     client_ids: Res<ClientIds>,
     time: Res<Time>,
@@ -42,7 +42,11 @@ fn movement(
     }
 }
 
-fn shared_movement_behaviour(velocity: &Velocity, mut force: Mut<ExternalForce>, input: &Inputs) {
+fn shared_movement_behaviour(
+    mut velocity: Mut<Velocity>,
+    mut force: Mut<ExternalForce>,
+    input: &Inputs,
+) {
     let lin = velocity.linvel.normalize();
     let multiplier = 0.1f32;
     let up = Vec3::Y;
@@ -59,11 +63,14 @@ fn shared_movement_behaviour(velocity: &Velocity, mut force: Mut<ExternalForce>,
             }
             if direction.left {
                 let rotated = up.cross(Quat::from_rotation_y(PI * 0.5) * lin);
-                force.torque += rotated * multiplier;
+                force.torque += rotated * multiplier * 2.0;
             }
             if direction.right {
                 let rotated = up.cross(Quat::from_rotation_y(PI * 0.5) * lin);
-                force.torque += -rotated * multiplier;
+                force.torque += -rotated * multiplier * 2.0;
+            }
+            if direction.reset {
+                velocity.angvel = Vec3::ZERO;
             }
         }
         _ => force.torque = Vec3::ZERO,

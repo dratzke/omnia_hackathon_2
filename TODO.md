@@ -4,9 +4,9 @@
 * register how far players moved (last track touched) (/)
 * register who finished when
 * grpc api to interact with client
-* take screenshots for clients if api controlled
+* take screenshots for clients if api controlled (/)
 * only allow input when ground was recently touched (/)
-* banked turns
+* banked turns block
 * modifier surfaces (friction, acceleration)
 * air resitance to limit max speed
 * track width should accomodate n players
@@ -15,3 +15,10 @@
 * modifier pickup (magnet, ?)
 * bumpy road block
 * smooth movement
+* grpc reflection
+* fix controll in air for 1s
+* smooth up/down block
+* increased gravity modifier
+* images per player on server
+* color self/others on client
+* bumpy road block

@@ -16,9 +16,16 @@ pub enum BlockType {
 }
 
 #[derive(Debug, Clone)]
+pub enum RoadType {
+    Asphalt,
+    Ice,
+}
+
+#[derive(Debug, Clone)]
 pub struct TrackSegment {
     pub block_type: BlockType,
     pub transform: BlockTransform,
+    pub road_type: RoadType,
 }
 
 pub struct Track {
@@ -37,28 +44,40 @@ impl Track {
             },
             noise: Perlin::new(0),
         };
-        track.append_block(BlockType::Straight { length: 10.0 });
+        track.append_block(BlockType::Straight { length: 10.0 }, RoadType::Asphalt);
         // track.append_block(BlockType::Slope {
         //     length: 10.0,
         //     height_change: -10.0,
         // });
-        track.append_block(BlockType::Turn {
-            angle: PI,
-            radius: 10.0,
-        });
-        track.append_block(BlockType::Turn {
-            angle: PI / 2.0,
-            radius: 10.0,
-        });
-        track.append_block(BlockType::Slope {
-            length: 10.0,
-            height_change: -10.0,
-        });
+        track.append_block(
+            BlockType::Turn {
+                angle: PI,
+                radius: 10.0,
+            },
+            RoadType::Asphalt,
+        );
+        track.append_block(
+            BlockType::Turn {
+                angle: PI / 2.0,
+                radius: 10.0,
+            },
+            RoadType::Asphalt,
+        );
+        track.append_block(
+            BlockType::Slope {
+                length: 10.0,
+                height_change: -10.0,
+            },
+            RoadType::Asphalt,
+        );
 
-        track.append_block(BlockType::Turn {
-            angle: PI / 2.0,
-            radius: 10.0,
-        });
+        track.append_block(
+            BlockType::Turn {
+                angle: PI / 2.0,
+                radius: 10.0,
+            },
+            RoadType::Asphalt,
+        );
         track
     }
     pub fn generate(seed: u32, initial_length: f32) -> Self {
@@ -71,14 +90,31 @@ impl Track {
             noise: Perlin::new(seed),
         };
 
-        track.append_block(BlockType::Slope {
-            length: initial_length,
-            height_change: -3.0,
-        });
+        track.append_block(
+            BlockType::Slope {
+                length: initial_length,
+                height_change: -3.0,
+            },
+            RoadType::Asphalt,
+        );
 
         for _ in 0..500 {
             let next_block = track.select_next_block();
-            track.append_block(next_block);
+            let road_type = if track
+                .noise
+                .get([
+                    track.current_end.position.x as f64 * 50.0,
+                    track.current_end.position.y as f64 * 50.0,
+                    track.current_end.position.z as f64 * 50.0,
+                ])
+                .abs()
+                < 0.1
+            {
+                RoadType::Ice
+            } else {
+                RoadType::Asphalt
+            };
+            track.append_block(next_block, road_type);
         }
 
         track
@@ -125,12 +161,13 @@ impl Track {
         // }
     }
 
-    fn append_block(&mut self, block_type: BlockType) {
+    fn append_block(&mut self, block_type: BlockType, road_type: RoadType) {
         let end_transform = self.calculate_end_transform(&block_type);
 
         self.segments.push(TrackSegment {
             block_type,
             transform: self.current_end,
+            road_type,
         });
 
         self.current_end = end_transform;

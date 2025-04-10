@@ -7,10 +7,12 @@ use tonic::{Request, Response, Status, transport::Server};
 // Import the generated proto code
 pub mod marble {
     tonic::include_proto!("marble");
+    pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
+        tonic::include_file_descriptor_set!("service_descriptor");
 }
 
 use marble::marble_service_server::{MarbleService, MarbleServiceServer};
-use marble::{GetStateRequest, StateResponse};
+use marble::{EmptyResponse, GetStateRequest, InputRequest, StateResponse};
 
 use crate::client_grpc_service::GRPCService;
 use crate::protocol::Inputs;
@@ -26,6 +28,9 @@ impl MarbleService for GRPCServer {
         _: Request<GetStateRequest>,
     ) -> Result<Response<StateResponse>, Status> {
         self.service.get_state().await
+    }
+    async fn input(&self, r: Request<InputRequest>) -> Result<Response<EmptyResponse>, Status> {
+        self.service.input(r.into_inner()).await
     }
 }
 
@@ -46,11 +51,16 @@ pub fn start_gprc_server(
                 current_input: current_input_mutex,
             },
         };
+        let reflection = tonic_reflection::server::Builder::configure()
+            .register_encoded_file_descriptor_set(marble::FILE_DESCRIPTOR_SET)
+            .build_v1()
+            .unwrap();
 
         println!("Server listening on {}", addr);
 
         rt.block_on(async {
             Server::builder()
+                .add_service(reflection)
                 .add_service(MarbleServiceServer::new(greeter))
                 .serve(addr)
                 .await

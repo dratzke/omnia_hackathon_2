@@ -95,8 +95,20 @@ fn track_segment_collision_system(
                 );
             }
             CollisionEvent::Stopped(entity1, entity2, _) => {
-                process_potential_collision_stop(*entity1, *entity2, &mut players, &track_segments);
-                process_potential_collision_stop(*entity2, *entity1, &mut players, &track_segments);
+                process_potential_collision_stop(
+                    *entity1,
+                    *entity2,
+                    &mut players,
+                    &track_segments,
+                    &time,
+                );
+                process_potential_collision_stop(
+                    *entity2,
+                    *entity1,
+                    &mut players,
+                    &track_segments,
+                    &time,
+                );
             }
         }
     }
@@ -128,11 +140,13 @@ fn process_potential_collision_stop(
     potential_track: Entity,
     players: &mut Query<(&mut LastTouchedId, &mut LastTouchedTime), With<PlayerPosition>>,
     track_segments: &Query<&TrackSegmentId>,
+    time: &Res<Time>,
 ) {
     // Only proceed if the entities match our requirements
     if let Ok((_, mut last_touch_time)) = players.get_mut(potential_player) {
         if let Ok(_) = track_segments.get(potential_track) {
             last_touch_time.1 = false;
+            last_touch_time.0 = time.elapsed_secs();
         }
     }
 }

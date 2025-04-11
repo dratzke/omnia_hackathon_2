@@ -39,6 +39,7 @@ clippy:
     cargo clippy -- -D warnings
 
 run-both-grpc: build
+    cp -r assets ./target/release/
     ./target/release/server --auth-port 5001 --game-port 5000 & 
     echo $$ > server.pid 
     sleep 2 
@@ -46,6 +47,7 @@ run-both-grpc: build
 
 run-both: build
     # Start server in background, save PID, wait 5s, run client, then kill server
+    cp -r assets ./target/release/
     ./target/release/server --auth-port 5001 --game-port 5000 & 
     echo $$ > server.pid 
     sleep 2 

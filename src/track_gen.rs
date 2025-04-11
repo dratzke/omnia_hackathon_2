@@ -130,7 +130,7 @@ impl Track {
             } else {
                 RoadType::Asphalt
             };
-            let modfier = if track
+            let modifier = if track
                 .noise
                 .get([
                     40.0 * PI as f64 + track.current_end.position.x as f64 * 0.5,

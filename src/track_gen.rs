@@ -147,7 +147,7 @@ impl Track {
             } else {
                 BallModifier::None
             };
-            track.append_block(next_block, road_type, modfier);
+            track.append_block(next_block, road_type, modifier);
         }
 
         track

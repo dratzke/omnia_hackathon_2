@@ -17,4 +17,4 @@
 * dots to follow
 * python add default libs
 * low graphics mode if required
-* improve controll
+* improve control

@@ -56,18 +56,22 @@ fn shared_movement_behaviour(
             if direction.forward {
                 let forward_torque = up.cross(lin).normalize();
                 force.torque += forward_torque * multiplier;
+                force.torque = force.torque.clamp_length(-10.0, 10.0);
             }
             if direction.back {
                 let forward_torque = up.cross(lin).normalize();
                 force.torque += -forward_torque * multiplier;
+                force.torque = force.torque.clamp_length(-10.0, 10.0);
             }
             if direction.left {
                 let rotated = up.cross(Quat::from_rotation_y(PI * 0.5) * lin);
                 force.torque += rotated * multiplier * 2.0;
+                force.torque = force.torque.clamp_length(-10.0, 10.0);
             }
             if direction.right {
                 let rotated = up.cross(Quat::from_rotation_y(PI * 0.5) * lin);
                 force.torque += -rotated * multiplier * 2.0;
+                force.torque = force.torque.clamp_length(-10.0, 10.0);
             }
             if direction.reset {
                 velocity.angvel = Vec3::ZERO;

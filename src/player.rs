@@ -4,7 +4,7 @@ use lightyear::prelude::client::Predicted;
 
 use crate::{
     protocol::{PlayerColor, PlayerPosition},
-    world::{LastTouchedId, LastTouchedTime},
+    world::{GravityModifier, LastTouchedId, LastTouchedTime},
 };
 
 pub struct PlayerPlugin {
@@ -58,8 +58,14 @@ fn attach_player_model(
                     torque: Vec3::ZERO,
                 })
                 .insert(GravityScale(1.0))
+                .insert(Ccd::enabled())
                 .insert(LastTouchedId(0))
-                .insert(LastTouchedTime(0.0, false));
+                .insert(LastTouchedTime(0.0, false))
+                .insert(GravityModifier {
+                    base_gravity: 1.0,
+                    remaining: Timer::from_seconds(0.0, TimerMode::Once),
+                    current: 1.0,
+                });
         }
     }
     if c != 0 {

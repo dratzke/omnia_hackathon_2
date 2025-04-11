@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use noise::{NoiseFn, Perlin};
-use std::f32::consts::PI;
+use std::{f32::consts::PI, time::Duration};
 
 #[derive(Debug, Clone, Copy)]
 pub struct BlockTransform {
@@ -22,10 +22,17 @@ pub enum RoadType {
 }
 
 #[derive(Debug, Clone)]
+pub enum BallModifier {
+    GravityChange { strength: f32, duration: Duration },
+    None,
+}
+
+#[derive(Debug, Clone)]
 pub struct TrackSegment {
     pub block_type: BlockType,
     pub transform: BlockTransform,
     pub road_type: RoadType,
+    pub modifier: BallModifier,
 }
 
 pub struct Track {
@@ -44,7 +51,11 @@ impl Track {
             },
             noise: Perlin::new(0),
         };
-        track.append_block(BlockType::Straight { length: 10.0 }, RoadType::Asphalt);
+        track.append_block(
+            BlockType::Straight { length: 10.0 },
+            RoadType::Asphalt,
+            BallModifier::None,
+        );
         // track.append_block(BlockType::Slope {
         //     length: 10.0,
         //     height_change: -10.0,
@@ -55,6 +66,7 @@ impl Track {
                 radius: 10.0,
             },
             RoadType::Asphalt,
+            BallModifier::None,
         );
         track.append_block(
             BlockType::Turn {
@@ -62,6 +74,7 @@ impl Track {
                 radius: 10.0,
             },
             RoadType::Asphalt,
+            BallModifier::None,
         );
         track.append_block(
             BlockType::Slope {
@@ -69,6 +82,7 @@ impl Track {
                 height_change: -10.0,
             },
             RoadType::Asphalt,
+            BallModifier::None,
         );
 
         track.append_block(
@@ -77,6 +91,7 @@ impl Track {
                 radius: 10.0,
             },
             RoadType::Asphalt,
+            BallModifier::None,
         );
         track
     }
@@ -96,6 +111,7 @@ impl Track {
                 height_change: -3.0,
             },
             RoadType::Asphalt,
+            BallModifier::None,
         );
 
         for _ in 0..500 {
@@ -103,9 +119,9 @@ impl Track {
             let road_type = if track
                 .noise
                 .get([
-                    track.current_end.position.x as f64 * 50.0,
-                    track.current_end.position.y as f64 * 50.0,
-                    track.current_end.position.z as f64 * 50.0,
+                    track.current_end.position.x as f64 * 0.5,
+                    track.current_end.position.y as f64 * 0.5,
+                    track.current_end.position.z as f64 * 0.5,
                 ])
                 .abs()
                 < 0.1
@@ -114,7 +130,24 @@ impl Track {
             } else {
                 RoadType::Asphalt
             };
-            track.append_block(next_block, road_type);
+            let modfier = if track
+                .noise
+                .get([
+                    40.0 * PI as f64 + track.current_end.position.x as f64 * 0.5,
+                    40.0 * PI as f64 + track.current_end.position.y as f64 * 0.5,
+                    40.0 * PI as f64 + track.current_end.position.z as f64 * 0.5,
+                ])
+                .abs()
+                > 0.9
+            {
+                BallModifier::GravityChange {
+                    strength: 4.0,
+                    duration: Duration::from_secs(10),
+                }
+            } else {
+                BallModifier::None
+            };
+            track.append_block(next_block, road_type, modfier);
         }
 
         track
@@ -161,13 +194,14 @@ impl Track {
         // }
     }
 
-    fn append_block(&mut self, block_type: BlockType, road_type: RoadType) {
+    fn append_block(&mut self, block_type: BlockType, road_type: RoadType, modifier: BallModifier) {
         let end_transform = self.calculate_end_transform(&block_type);
 
         self.segments.push(TrackSegment {
             block_type,
             transform: self.current_end,
             road_type,
+            modifier,
         });
 
         self.current_end = end_transform;

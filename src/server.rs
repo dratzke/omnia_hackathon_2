@@ -22,7 +22,7 @@ use lightyear::prelude::server::*;
 use lightyear::prelude::*;
 use lightyear::server::events::{ConnectEvent, DisconnectEvent};
 use lightyear::{connection::netcode::PRIVATE_KEY_BYTES, prelude::ClientId::Netcode};
-use player::{PlayerBundle, PlayerPlugin};
+use player::{PlayerBundle, PlayerPlugin, SpawnedPlayersCount};
 use protocol::{PlayerColor, PlayerPosition, ProtocolPlugin};
 use rand::{TryRngCore, rngs::OsRng};
 use server::{IoConfig, NetConfig, NetcodeConfig, ServerCommands, ServerConfig, ServerPlugins};
@@ -36,6 +36,8 @@ struct ServerArgs {
     auth_port: u16,
     #[clap(long)]
     game_port: u16,
+    #[clap(long)]
+    players: u8,
 }
 
 pub fn main() {
@@ -49,6 +51,7 @@ pub fn main() {
         private_key: key,
         game_server_addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, game_port)),
         auth_server_addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, auth_port)),
+        player_count: args.players,
     };
 
     let mut app = App::new();
@@ -67,6 +70,7 @@ pub struct ServerPlugin {
     pub private_key: Key,
     pub game_server_addr: SocketAddr,
     pub auth_server_addr: SocketAddr,
+    pub player_count: u8,
 }
 #[derive(Resource)]
 struct ClientIds(Arc<RwLock<HashMap<u64, Entity>>>);
@@ -80,7 +84,10 @@ impl Plugin for ServerPlugin {
             self.private_key,
         ));
         app.add_plugins(ProtocolPlugin);
-        app.add_plugins(PlayerPlugin { physics: true });
+        app.add_plugins(PlayerPlugin {
+            physics: true,
+            player_count: self.player_count,
+        });
         app.add_plugins(ServerInputPlugin);
         app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());
         app.add_plugins(WorldPlugin { physics: true });
@@ -146,9 +153,14 @@ fn handle_connect_event(
     trigger: Trigger<ConnectEvent>,
     client_ids: Res<ClientIds>,
     mut commands: Commands,
+    mut player_count: ResMut<SpawnedPlayersCount>,
 ) {
     if let Netcode(client_id) = trigger.event().client_id {
-        let pos = Vec3::new(0.0, rand::random_range(5.0..9.0), 4.0);
+        let pos = Vec3::new(
+            distribute_space(player_count.max, player_count.current),
+            9.0,
+            4.0,
+        );
         info!("client logged in");
         let entity = commands
             .spawn(PlayerBundle {
@@ -167,8 +179,23 @@ fn handle_connect_event(
                 ..Default::default()
             })
             .id();
+        player_count.current += 1;
         client_ids.0.write().unwrap().insert(client_id, entity);
     }
+}
+
+fn distribute_space(max: u8, i: u8) -> f32 {
+    let range_start = -4.5;
+    let range_end = 4.5;
+    let range_width = range_end - range_start;
+
+    // Calculate the width of each subdivision
+    let subdivision_width = range_width / (max as f32);
+
+    // Calculate the i-th point (center of the i-th subdivision)
+    let point = range_start + (i as f32 + 0.5) * subdivision_width;
+
+    point
 }
 
 fn start_netcode_authentication_task(

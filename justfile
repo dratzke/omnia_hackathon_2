@@ -40,7 +40,7 @@ clippy:
 
 run-both-grpc: build
     cp -r assets ./target/release/
-    ./target/release/server --auth-port 5001 --game-port 5000 & 
+    ./target/release/server --auth-port 5001 --game-port 5000 --players 1 & 
     echo $$ > server.pid 
     sleep 2 
     ./target/release/client --auth-port 5001 --server 127.0.0.1 --client-port 4000 --grpc-port 50051
@@ -48,7 +48,7 @@ run-both-grpc: build
 run-both: build
     # Start server in background, save PID, wait 5s, run client, then kill server
     cp -r assets ./target/release/
-    ./target/release/server --auth-port 5001 --game-port 5000 & 
+    ./target/release/server --auth-port 5001 --game-port 5000 --players 2 & 
     echo $$ > server.pid 
     sleep 2 
     ./target/release/client --auth-port 5001 --server 127.0.0.1 --client-port 4000 &

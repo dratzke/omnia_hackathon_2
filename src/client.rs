@@ -117,7 +117,10 @@ impl Plugin for MyClientPlugin {
         app.add_plugins(WorldPlugin { physics: false });
         app.add_plugins(ClientCameraPlugin);
 
-        app.add_plugins(PlayerPlugin { physics: false });
+        app.add_plugins(PlayerPlugin {
+            physics: false,
+            player_count: 0,
+        });
         app.add_systems(Startup, connect_client);
     }
 }

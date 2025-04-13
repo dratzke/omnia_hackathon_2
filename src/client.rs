@@ -10,7 +10,11 @@ mod track_mesh;
 mod world;
 
 use bevy_image_export::{GpuImageExportSource, ImageExport, ImageExportPlugin, ImageExportSource};
-use std::{net::SocketAddr, sync::Arc};
+use lightyear::{
+    prelude::client::{Predicted, Replicate},
+    shared::replication::components::Controlled,
+};
+use std::{net::SocketAddr, sync::Arc, u32};
 
 use bevy::{
     asset::RenderAssetUsages,
@@ -26,12 +30,13 @@ use bevy::{
 use clap::Parser;
 use client::{Authentication, ClientCommands, ClientPlugins, IoConfig, NetConfig};
 use client_cam::{ClientCameraPlugin, DirectionalCamera};
+use client_grpc_server::marble::ResultEntry;
 use client_grpc_server::start_gprc_server;
 use config::shared_config;
 use lightyear::{connection::netcode::CONNECT_TOKEN_BYTES, prelude::*};
 use player::PlayerPlugin;
 use player_input::PlayerInputPlugin;
-use protocol::{Inputs, ProtocolPlugin};
+use protocol::{GameResult, Inputs, PlayerName, ProtocolPlugin, VelocityShare};
 use tokio::sync::{Mutex, oneshot};
 use world::WorldPlugin;
 
@@ -45,6 +50,8 @@ struct ClientArgs {
     client_port: u16,
     #[clap(long)]
     grpc_port: Option<u16>,
+    #[clap(long)]
+    name: String,
 }
 
 pub fn main() {
@@ -54,9 +61,21 @@ pub fn main() {
     let client_port: u16 = args.client_port;
     let screen_mutex = Arc::new(Mutex::new(vec![]));
     let current_input_mutex = Arc::new(Mutex::new(Inputs::None));
+    let finished = Arc::new(Mutex::new(false));
+    let linear_velocity = Arc::new(Mutex::new(Vec3::ZERO));
+    let angular_velocity = Arc::new(Mutex::new(Vec3::ZERO));
+    let results = Arc::new(Mutex::new(Vec::new()));
 
     let _ = if let Some(grpc_port) = args.grpc_port {
-        start_gprc_server(screen_mutex.clone(), current_input_mutex.clone(), grpc_port)
+        start_gprc_server(
+            screen_mutex.clone(),
+            current_input_mutex.clone(),
+            finished.clone(),
+            linear_velocity.clone(),
+            angular_velocity.clone(),
+            results.clone(),
+            grpc_port,
+        )
     } else {
         std::thread::spawn(|| {})
     };
@@ -68,11 +87,18 @@ pub fn main() {
         screen: screen_mutex,
         current_input: current_input_mutex,
         grpc: args.grpc_port.is_some(),
+        name: args.name,
+        finished,
+        linear_velocity,
+        angular_velocity,
+        results,
     });
     app.run();
     // server_thread.join().unwrap();
 }
 
+#[derive(Resource)]
+pub struct MyPlayerName(pub String, pub bool);
 struct MyClientPlugin {
     auth_addr: SocketAddr,
     client_addr: SocketAddr,
@@ -80,12 +106,22 @@ struct MyClientPlugin {
     grpc: bool,
     screen: Arc<Mutex<Vec<u8>>>,
     current_input: Arc<Mutex<Inputs>>,
+    finished: Arc<Mutex<bool>>,
+    linear_velocity: Arc<Mutex<bevy::math::Vec3>>,
+    angular_velocity: Arc<Mutex<bevy::math::Vec3>>,
+    results: Arc<Mutex<Vec<ResultEntry>>>,
+
+    name: String,
 }
 
 #[derive(Resource)]
 struct ControlViaGrpc {
     screen: Arc<Mutex<Vec<u8>>>,
     current_input: Arc<Mutex<Inputs>>,
+    finished: Arc<Mutex<bool>>,
+    linear_velocity: Arc<Mutex<bevy::math::Vec3>>,
+    angular_velocity: Arc<Mutex<bevy::math::Vec3>>,
+    results: Arc<Mutex<Vec<ResultEntry>>>,
     enabled: bool,
 }
 
@@ -93,10 +129,19 @@ impl Plugin for MyClientPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(DefaultPlugins);
         app.add_plugins(ImageExportPlugin::default());
+        app.insert_resource(MyPlayerName(self.name.clone(), false));
+        app.add_systems(
+            Update,
+            (attach_name, sync_finished_grpc, sync_velocities_grpc),
+        );
         app.insert_resource(ControlViaGrpc {
             screen: self.screen.clone(),
             current_input: self.current_input.clone(),
             enabled: self.grpc,
+            finished: self.finished.clone(),
+            linear_velocity: self.linear_velocity.clone(),
+            angular_velocity: self.angular_velocity.clone(),
+            results: self.results.clone(),
         });
         let render_app = app.sub_app_mut(RenderApp);
 
@@ -104,6 +149,10 @@ impl Plugin for MyClientPlugin {
             screen: self.screen.clone(),
             current_input: self.current_input.clone(),
             enabled: self.grpc,
+            finished: self.finished.clone(),
+            linear_velocity: self.linear_velocity.clone(),
+            angular_velocity: self.angular_velocity.clone(),
+            results: self.results.clone(),
         });
         render_app.add_systems(
             Render,
@@ -120,6 +169,7 @@ impl Plugin for MyClientPlugin {
         app.add_plugins(PlayerPlugin {
             physics: false,
             player_count: 0,
+            max_game_seconds: u32::MAX,
         });
         app.add_systems(Startup, connect_client);
     }
@@ -169,6 +219,69 @@ fn connect_client(
         ));
     }
     commands.connect_client();
+}
+
+fn sync_velocities_grpc(
+    grpc: Res<ControlViaGrpc>,
+    player_q: Query<&VelocityShare, (With<Controlled>, Without<Predicted>)>,
+) {
+    let mut c = 0;
+    for player in player_q.iter() {
+        futures_lite::future::block_on(async {
+            let mut lin = grpc.linear_velocity.lock().await;
+            *lin = player.linear;
+        });
+
+        futures_lite::future::block_on(async {
+            let mut ang = grpc.angular_velocity.lock().await;
+            *ang = player.angular;
+        });
+        c += 1;
+    }
+    if c > 1 {
+        panic!()
+    }
+}
+
+fn sync_finished_grpc(grpc: Res<ControlViaGrpc>, finished: Query<&GameResult>) {
+    let mut c = 0;
+    for r in finished.iter() {
+        c += 1;
+        futures_lite::future::block_on(async {
+            let mut finished = grpc.finished.lock().await;
+            if !*finished {
+                *finished = true;
+            }
+        });
+
+        let results: Vec<_> = r
+            .players
+            .iter()
+            .map(|p| ResultEntry {
+                name: p.0.clone(),
+                finish_time: match p.1 {
+                    protocol::Finish::Time(t) => Some(t),
+                    protocol::Finish::TrackProgress(_, _) => None,
+                },
+                last_touched_road_id: match p.1 {
+                    protocol::Finish::Time(_) => None,
+                    protocol::Finish::TrackProgress(i, _) => Some(i as u64),
+                },
+                last_touched_road_time: match p.1 {
+                    protocol::Finish::Time(_) => None,
+                    protocol::Finish::TrackProgress(_, t) => Some(t),
+                },
+            })
+            .collect();
+
+        futures_lite::future::block_on(async {
+            let mut results_lock = grpc.results.lock().await;
+            *results_lock = results;
+        });
+    }
+    if c > 1 {
+        panic!()
+    }
 }
 
 fn sync_screen_grpc(
@@ -251,4 +364,19 @@ async fn get_connect_token(auth_addr: SocketAddr) -> ConnectToken {
     let mut buffer = [0u8; CONNECT_TOKEN_BYTES];
     stream.try_read(&mut buffer).unwrap();
     ConnectToken::try_from_bytes(&buffer).unwrap()
+}
+
+fn attach_name(mut my_name: ResMut<MyPlayerName>, mut commands: Commands) {
+    if !my_name.1 {
+        commands.spawn((
+            PlayerName(my_name.0.clone()),
+            Replicate {
+                target: client::ReplicateToServer,
+                authority: HasAuthority,
+                replicating: Replicating,
+                ..Default::default()
+            },
+        ));
+        my_name.1 = true;
+    }
 }

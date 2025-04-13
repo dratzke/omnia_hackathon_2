@@ -23,7 +23,7 @@ use lightyear::prelude::*;
 use lightyear::server::events::{ConnectEvent, DisconnectEvent};
 use lightyear::{connection::netcode::PRIVATE_KEY_BYTES, prelude::ClientId::Netcode};
 use player::{PlayerBundle, PlayerPlugin, SpawnedPlayersCount};
-use protocol::{PlayerColor, PlayerPosition, ProtocolPlugin};
+use protocol::{PlayerColor, PlayerPosition, ProtocolPlugin, VelocityShare};
 use rand::{TryRngCore, rngs::OsRng};
 use server::{IoConfig, NetConfig, NetcodeConfig, ServerCommands, ServerConfig, ServerPlugins};
 use server_input::ServerInputPlugin;
@@ -38,6 +38,8 @@ struct ServerArgs {
     game_port: u16,
     #[clap(long)]
     players: u8,
+    #[clap(long, default_value_t = 120)]
+    max_game_seconds: u32,
 }
 
 pub fn main() {
@@ -52,6 +54,7 @@ pub fn main() {
         game_server_addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, game_port)),
         auth_server_addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, auth_port)),
         player_count: args.players,
+        max_game_seconds: args.max_game_seconds,
     };
 
     let mut app = App::new();
@@ -71,6 +74,7 @@ pub struct ServerPlugin {
     pub game_server_addr: SocketAddr,
     pub auth_server_addr: SocketAddr,
     pub player_count: u8,
+    pub max_game_seconds: u32,
 }
 #[derive(Resource)]
 struct ClientIds(Arc<RwLock<HashMap<u64, Entity>>>);
@@ -87,6 +91,7 @@ impl Plugin for ServerPlugin {
         app.add_plugins(PlayerPlugin {
             physics: true,
             player_count: self.player_count,
+            max_game_seconds: self.max_game_seconds,
         });
         app.add_plugins(ServerInputPlugin);
         app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());
@@ -166,6 +171,10 @@ fn handle_connect_event(
             .spawn(PlayerBundle {
                 position: PlayerPosition(pos, Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, 0.0)),
                 color: PlayerColor(Color::oklab(0.50, -0.03, -0.09)),
+            })
+            .insert(VelocityShare {
+                linear: Vec3::ZERO,
+                angular: Vec3::ZERO,
             })
             .insert(Replicate {
                 sync: SyncTarget {

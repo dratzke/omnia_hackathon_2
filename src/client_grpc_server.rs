@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::thread::JoinHandle;
 
+use bevy::math::Vec3;
 use tokio::sync::Mutex;
 use tonic::{Request, Response, Status, transport::Server};
 
@@ -12,7 +13,7 @@ pub mod marble {
 }
 
 use marble::marble_service_server::{MarbleService, MarbleServiceServer};
-use marble::{EmptyResponse, GetStateRequest, InputRequest, StateResponse};
+use marble::{EmptyResponse, GetStateRequest, InputRequest, ResultEntry, StateResponse};
 
 use crate::client_grpc_service::GRPCService;
 use crate::protocol::Inputs;
@@ -37,6 +38,10 @@ impl MarbleService for GRPCServer {
 pub fn start_gprc_server(
     screen_mutex: Arc<Mutex<Vec<u8>>>,
     current_input_mutex: Arc<Mutex<Inputs>>,
+    finished: Arc<Mutex<bool>>,
+    linear_velocity: Arc<Mutex<Vec3>>,
+    angular_velocity: Arc<Mutex<Vec3>>,
+    results: Arc<Mutex<Vec<ResultEntry>>>,
     grpc_port: u16,
 ) -> JoinHandle<()> {
     std::thread::spawn(move || {
@@ -49,6 +54,10 @@ pub fn start_gprc_server(
             service: GRPCService {
                 screen: screen_mutex,
                 current_input: current_input_mutex,
+                finished,
+                linear_velocity,
+                angular_velocity,
+                results,
             },
         };
         let reflection = tonic_reflection::server::Builder::configure()

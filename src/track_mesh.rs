@@ -8,7 +8,7 @@ use bevy::{
 use crate::track_gen::{BlockType, rotate_point_around};
 
 // Constants
-const TRACK_WIDTH: f32 = 10.0;
+pub const TRACK_WIDTH: f32 = 10.0;
 const SEGMENTS_PER_RADIAN: usize = 10;
 
 // Function to generate a mesh for a single block

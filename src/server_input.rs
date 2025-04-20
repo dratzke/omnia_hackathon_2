@@ -8,7 +8,7 @@ use server::InputEvent;
 use crate::{
     ClientIds,
     protocol::{Inputs, PlayerPosition},
-    world::LastTouchedTime,
+    world::LastTouched,
 };
 
 pub struct ServerInputPlugin;
@@ -21,7 +21,7 @@ impl Plugin for ServerInputPlugin {
 }
 
 fn movement(
-    mut position_query: Query<(&mut Velocity, &mut ExternalForce, &LastTouchedTime)>,
+    mut position_query: Query<(&mut Velocity, &mut ExternalForce, &LastTouched)>,
     mut input_reader: EventReader<InputEvent<Inputs>>,
     client_ids: Res<ClientIds>,
     time: Res<Time>,
@@ -33,7 +33,7 @@ fn movement(
             if let Some(player_entity) = client_ids.get(&client_id.to_bits()) {
                 if let Ok((velocity, force, last_touched)) = position_query.get_mut(*player_entity)
                 {
-                    if time.elapsed_secs() - last_touched.0 < 1.0 || last_touched.1 {
+                    if time.elapsed_secs() - last_touched.at < 1.0 || last_touched.touching {
                         shared_movement_behaviour(velocity, force, input);
                     }
                 }

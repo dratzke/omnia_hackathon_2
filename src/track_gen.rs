@@ -52,27 +52,15 @@ impl Track {
             noise: Perlin::new(0),
         };
         track.append_block(
+            BlockType::Slope {
+                length: 10.0,
+                height_change: -10.0,
+            },
+            RoadType::Asphalt,
+            BallModifier::None,
+        );
+        track.append_block(
             BlockType::Straight { length: 10.0 },
-            RoadType::Asphalt,
-            BallModifier::None,
-        );
-        // track.append_block(BlockType::Slope {
-        //     length: 10.0,
-        //     height_change: -10.0,
-        // });
-        track.append_block(
-            BlockType::Turn {
-                angle: PI,
-                radius: 10.0,
-            },
-            RoadType::Asphalt,
-            BallModifier::None,
-        );
-        track.append_block(
-            BlockType::Turn {
-                angle: PI / 2.0,
-                radius: 10.0,
-            },
             RoadType::Asphalt,
             BallModifier::None,
         );
@@ -84,15 +72,12 @@ impl Track {
             RoadType::Asphalt,
             BallModifier::None,
         );
-
         track.append_block(
-            BlockType::Turn {
-                angle: PI / 2.0,
-                radius: 10.0,
-            },
+            BlockType::Straight { length: 10.0 },
             RoadType::Asphalt,
             BallModifier::None,
         );
+
         track
     }
     pub fn generate(seed: u32, initial_length: f32) -> Self {

@@ -1,11 +1,9 @@
 * track generation should not go into itself
-* start the physics once all players joined
-* register who finished when
 * banked turns block
 * air resitance to limit max speed
 * track width should accomodate n players
 * spawn players next to one another
-* modifier pickup (magnet, ?)
+* modifier pickup (magnet, gravity)
 * bumpy road block
 * smooth movement
 * smooth up/down block
@@ -18,3 +16,4 @@
 * python add default libs
 * low graphics mode if required
 * improve control
+* questionaire for hackathon groups

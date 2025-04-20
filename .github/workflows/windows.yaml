@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -50,9 +51,9 @@ jobs:
       shell: bash
       if: ${{ runner.os == 'linux' }}
       run: >
-        sudo apt-get update
-
-        sudo apt-get install --no-install-recommends 'libasound2-dev' 'libudev-dev' 'libwayland-dev' 'libxkbcommon-dev' 'protobuf-compiler'
+        sudo apt-get update && \
+        sudo apt-get install --no-install-recommends -y \
+        libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev protobuf-compiler zip
 
     - name: Build Release Binaries
       run: |
@@ -68,16 +69,16 @@ jobs:
           target/release/server
 
   create-release:
-    needs: [build-windows, build-linux]
+    needs: [build-windows, build-linux] # Depends on both build jobs completing successfully
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Required to create releases and upload assets
       
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0 # Needed for ncipollo/release-action to generate release notes
 
     - name: Get Commit Hash
       id: commit_hash
@@ -87,21 +88,44 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: windows-binaries
-        path: windows
+        path: artifacts/windows # Download to a subdirectory
 
     - name: Download Linux Artifacts
       uses: actions/download-artifact@v4
       with:
         name: linux-binaries
-        path: linux
+        path: artifacts/linux # Download to a subdirectory
 
-    - name: Create Release
+    - name: Prepare Release Package
+      run: |
+        mkdir release-package # Create a staging directory
+        # Copy downloaded binaries
+        cp artifacts/windows/client.exe release-package/
+        cp artifacts/windows/server.exe release-package/
+        cp artifacts/linux/client release-package/
+        cp artifacts/linux/server release-package/
+        # Copy the assets folder from the checkout
+        if [ -d "assets" ]; then
+          cp -r assets release-package/
+        else
+          echo "Warning: 'assets' folder not found in repository root. Skipping."
+        fi
+        ls -R release-package # Optional: List contents for debugging
+
+    - name: Create Zip Archive
+      run: |
+        cd release-package # Change directory to zip contents, not the folder itself
+        zip -r ../release-${{ steps.commit_hash.outputs.hash }}.zip . # Create zip one level up
+        cd .. # Return to previous directory
+        echo "Created release-${{ steps.commit_hash.outputs.hash }}.zip"
+
+    - name: Create Release and Upload Zip
       uses: ncipollo/release-action@v1
       with:
         tag: ${{ steps.commit_hash.outputs.hash }}
         name: "Release ${{ steps.commit_hash.outputs.hash }}"
-        artifacts: "windows/client.exe,windows/server.exe,linux/client,linux/server"
+        artifacts: "release-${{ steps.commit_hash.outputs.hash }}.zip" # Point to the single zip file
         replacesArtifacts: true
         allowUpdates: true
         token: ${{ secrets.GITHUB_TOKEN }}
-        generateReleaseNotes: true
+        generateReleaseNotes: true # Generates release notes based on commits since last tag

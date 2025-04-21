@@ -1,6 +1,7 @@
 mod config;
 mod player;
 mod protocol;
+mod server_cam;
 mod server_input;
 mod track_gen;
 mod track_mesh;
@@ -13,7 +14,7 @@ use std::{
 };
 
 use async_compat::Compat;
-use bevy::{prelude::*, tasks::IoTaskPool};
+use bevy::{prelude::*, tasks::IoTaskPool, window::CursorGrabMode};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 use bevy_rapier3d::prelude::*;
 use clap::Parser;
@@ -26,6 +27,7 @@ use player::{PlayerBundle, PlayerPlugin, SpawnedPlayersCount};
 use protocol::{PlayerColor, PlayerPosition, ProtocolPlugin, VelocityShare};
 use rand::{TryRngCore, rngs::OsRng};
 use server::{IoConfig, NetConfig, NetcodeConfig, ServerCommands, ServerConfig, ServerPlugins};
+use server_cam::{CameraController, CameraControllerPlugin};
 use server_input::ServerInputPlugin;
 use tokio::io::AsyncWriteExt;
 use world::WorldPlugin;
@@ -96,7 +98,7 @@ impl Plugin for ServerPlugin {
         app.add_plugins(ServerInputPlugin);
         app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());
         app.add_plugins(WorldPlugin { physics: true });
-        app.add_plugins(PanOrbitCameraPlugin);
+        app.add_plugins(CameraControllerPlugin);
 
         app.add_systems(Startup, start_server);
         app.insert_resource(ClientIds(client_ids.clone()));
@@ -140,12 +142,17 @@ fn build_server_plugin(game_server_addr: u16, key: Key) -> ServerPlugins {
     ServerPlugins::new(config)
 }
 
-fn start_server(mut commands: Commands) {
+fn start_server(mut commands: Commands, mut windows: Query<&mut Window>) {
     commands.start_server();
     commands.spawn((
-        PanOrbitCamera::default(),
-        Transform::from_xyz(-2.5, 4.5, 9.0).looking_at(Vec3::ZERO, Vec3::Y),
+        CameraController,
+        Camera3d::default(),
+        Transform::from_xyz(0.0, 10.0, -10.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
+
+    let mut window = windows.single_mut();
+    window.cursor_options.grab_mode = CursorGrabMode::Locked;
+    window.cursor_options.visible = false;
 }
 
 fn handle_disconnect_event(trigger: Trigger<DisconnectEvent>, client_ids: Res<ClientIds>) {

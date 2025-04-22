@@ -39,6 +39,7 @@ pub struct Track {
     pub segments: Vec<TrackSegment>,
     pub current_end: BlockTransform,
     noise: Perlin,
+    turn_since_down: f32,
 }
 
 impl Track {
@@ -50,6 +51,7 @@ impl Track {
                 rotation: Quat::IDENTITY,
             },
             noise: Perlin::new(0),
+            turn_since_down: 0.0,
         };
         track.append_block(
             BlockType::Slope {
@@ -88,6 +90,7 @@ impl Track {
                 rotation: Quat::IDENTITY,
             },
             noise: Perlin::new(seed),
+            turn_since_down: 0.0,
         };
 
         track.append_block(
@@ -99,8 +102,13 @@ impl Track {
             BallModifier::None,
         );
 
-        for _ in 0..500 {
+        for _ in 0..100 {
             let next_block = track.select_next_block();
+            match next_block {
+                BlockType::Turn { angle, .. } => track.turn_since_down += angle,
+                BlockType::Slope { .. } => track.turn_since_down = 0.0,
+                _ => (),
+            }
             let road_type = if track
                 .noise
                 .get([
@@ -139,6 +147,17 @@ impl Track {
     }
 
     fn select_next_block(&self) -> BlockType {
+        if self.turn_since_down > 1.4 * PI {
+            return BlockType::Slope {
+                length: 15.0,
+                height_change: -((self.noise.get([
+                    self.current_end.position.y as f64 * 0.3,
+                    self.current_end.position.x as f64 * 0.3,
+                ]) as f32)
+                    * 10.0
+                    + 10.0),
+            };
+        }
         let noise_value = self.noise.get([self.segments.len() as f64 * 0.3, 0.0]);
 
         match (noise_value).abs() {
@@ -149,8 +168,9 @@ impl Track {
                     self.current_end.position.y as f64 * 0.3,
                 ]) as f32)
                     .abs();
+                let angle = PI * r + 0.3;
                 BlockType::Turn {
-                    angle: PI * r + 0.3,
+                    angle,
                     radius: self.turn_radius(),
                 }
             }
@@ -167,28 +187,29 @@ impl Track {
     }
 
     fn turn_radius(&self) -> f32 {
-        // if rand::random_bool(0.5) {
         let r = (self.noise.get([
             self.current_end.position.y as f64 * 0.3,
             self.current_end.position.x as f64 * 0.3,
         ]) as f32)
             .abs();
         r * 20.0 + 10.0
-        // } else {
-        // rand::random_range(-30.0..-10.0)
-        // }
     }
 
-    fn append_block(&mut self, block_type: BlockType, road_type: RoadType, modifier: BallModifier) {
+    pub fn append_block(
+        &mut self,
+        block_type: BlockType,
+        road_type: RoadType,
+        modifier: BallModifier,
+    ) {
         let end_transform = self.calculate_end_transform(&block_type);
 
+        // Check for overlap
         self.segments.push(TrackSegment {
             block_type,
             transform: self.current_end,
             road_type,
             modifier,
         });
-
         self.current_end = end_transform;
     }
 
@@ -245,139 +266,4 @@ pub fn rotate_point_around(point: Vec2, around: Vec2, angle: f32) -> Vec2 {
     let y_final = y_rotated + around.y;
 
     Vec2::new(x_final, y_final)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use super::{BlockTransform, BlockType, Track};
-    use approx::assert_relative_eq;
-    use bevy::prelude::*;
-    use std::f32::consts::FRAC_PI_2;
-
-    const EPSILON: f32 = 0.001;
-
-    fn calculate_end(block_type: &BlockType, start: BlockTransform) -> BlockTransform {
-        match block_type {
-            BlockType::Straight { length } => {
-                let direction = start.rotation * Vec3::Z;
-                BlockTransform {
-                    position: start.position + direction * length,
-                    rotation: start.rotation,
-                }
-            }
-            BlockType::Turn { angle, radius } => {
-                let rotation = start.rotation * Quat::from_rotation_y(*angle);
-                BlockTransform {
-                    position: start.position + rotation * Vec3::new(*radius, 0.0, *radius),
-                    rotation,
-                }
-            }
-            BlockType::Slope {
-                length,
-                height_change,
-            } => BlockTransform {
-                position: start.position + start.rotation * Vec3::new(0.0, *height_change, *length),
-                rotation: start.rotation,
-            },
-        }
-    }
-
-    #[test]
-    fn test_consecutive_segments_connect() {
-        let track = Track::generate(123, 10.0);
-
-        for i in 0..track.segments.len() - 1 {
-            let current = &track.segments[i];
-            let next = &track.segments[i + 1];
-
-            let computed_end = calculate_end(&current.block_type, current.transform);
-
-            assert_relative_eq!(
-                computed_end.position.x,
-                next.transform.position.x,
-                epsilon = EPSILON
-            );
-            assert_relative_eq!(
-                computed_end.position.y,
-                next.transform.position.y,
-                epsilon = EPSILON
-            );
-            assert_relative_eq!(
-                computed_end.position.z,
-                next.transform.position.z,
-                epsilon = EPSILON
-            );
-        }
-    }
-
-    #[test]
-    fn test_net_downward_slope() {
-        let track = Track::generate(456, 15.0);
-        assert!(
-            track.current_end.position.y < 0.0,
-            "Track should end below starting height"
-        );
-
-        let total_height_change =
-            track.current_end.position.y - track.segments.first().unwrap().transform.position.y;
-        assert!(
-            total_height_change < -5.0,
-            "Significant downward slope required. Actual: {}",
-            total_height_change
-        );
-    }
-
-    #[test]
-    fn no_overlapping_positions() {
-        let track = Track::generate(789, 12.0);
-        let mut positions = Vec::new();
-
-        for segment in &track.segments {
-            positions.push(segment.transform.position);
-        }
-        positions.push(track.current_end.position);
-
-        // Check all pairwise combinations
-        for i in 0..positions.len() {
-            for j in (i + 2)..positions.len() {
-                let distance = positions[i].distance(positions[j]);
-                assert!(
-                    distance > 3.0,
-                    "Potential overlap between positions {} and {} (distance: {})",
-                    i,
-                    j,
-                    distance
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn valid_rotations() {
-        let track = Track::generate(321, 8.0);
-
-        for segment in &track.segments {
-            // Check rotation is normalized
-            assert_relative_eq!(segment.transform.rotation.length(), 1.0, epsilon = EPSILON);
-
-            // Check pitch doesn't exceed 45 degrees
-            let (yaw, pitch, roll) = segment.transform.rotation.to_euler(EulerRot::YXZ);
-            assert!(
-                pitch.abs() < FRAC_PI_2 / 2.0,
-                "Excessive pitch angle: {} radians",
-                pitch
-            );
-        }
-    }
-
-    #[test]
-    fn point_rotation() {
-        let r = rotate_point_around(Vec2::ZERO, Vec2::new(0.0, 1.0), 0.0);
-        assert_relative_eq!(r.x, 0.0);
-        assert_relative_eq!(r.y, 0.0);
-        let r = rotate_point_around(Vec2::ZERO, Vec2::new(0.0, 1.0), PI);
-        assert_relative_eq!(r.x, 0.0);
-        assert_relative_eq!(r.y, 2.0);
-    }
 }

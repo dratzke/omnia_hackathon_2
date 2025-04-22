@@ -20,7 +20,7 @@ jobs:
     - name: Setup Protoc
       uses: arduino/setup-protoc@v2
       with:
-        version: "23.4"  
+        version: "23.4"
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build Release Binaries
@@ -51,7 +51,7 @@ jobs:
       shell: bash
       if: ${{ runner.os == 'linux' }}
       run: |
-        sudo apt-get update 
+        sudo apt-get update
         sudo apt-get install --no-install-recommends -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev protobuf-compiler zip
 
     - name: Build Release Binaries
@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # Required to create releases and upload assets
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -109,12 +109,21 @@ jobs:
         else
           echo "Warning: 'assets' folder not found in repository root. Skipping."
         fi
+        # --- ADDED: Copy the bot directory ---
+        if [ -d "bot" ]; then
+          cp -r bot release-package/
+          echo "Copied 'bot' directory to release package."
+        else
+          echo "Warning: 'bot' folder not found in repository root. Skipping."
+        fi
+        # --- End of added section ---
         ls -R release-package # Optional: List contents for debugging
 
     - name: Create Zip Archive
       run: |
-        cd release-package # Change directory to zip contents, not the folder itself
-        zip -r ../release-${{ steps.commit_hash.outputs.hash }}.zip . # Create zip one level up
+        cd release-package # Change directory to zip contents, not the folder itself[2]
+        # The zip command remains the same, as it zips all contents of the current directory (.)
+        zip -r ../release-${{ steps.commit_hash.outputs.hash }}.zip . # Create zip one level up[1][3]
         cd .. # Return to previous directory
         echo "Created release-${{ steps.commit_hash.outputs.hash }}.zip"
 
@@ -123,7 +132,7 @@ jobs:
       with:
         tag: ${{ steps.commit_hash.outputs.hash }}
         name: "Release ${{ steps.commit_hash.outputs.hash }}"
-        artifacts: "release-${{ steps.commit_hash.outputs.hash }}.zip" # Point to the single zip file
+        artifacts: "release-${{ steps.commit_hash.outputs.hash }}.zip" # Point to the single zip file[5]
         replacesArtifacts: true
         allowUpdates: true
         token: ${{ secrets.GITHUB_TOKEN }}

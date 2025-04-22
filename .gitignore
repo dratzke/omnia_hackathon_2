@@ -1,2 +1,8 @@
 /target
 *.pid
+bot/__pycache__
+bot/marble_client_records.csv
+bot/.venv
+bot/output_images
+bot/pylsp.log
+bot/proto/__pycache__

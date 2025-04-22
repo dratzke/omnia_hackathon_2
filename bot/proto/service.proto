@@ -1,0 +1,42 @@
+syntax = "proto3";
+package marble;
+
+message GetStateRequest{
+}
+
+message StateResponse{
+  bytes screen = 1;
+  Vec3 linear_velocity = 2;
+  Vec3 angular_velocity = 3;
+  bool finished = 4;
+  repeated ResultEntry results = 5;
+}
+
+message ResultEntry {
+  string name = 1;
+  optional float finish_time = 2;
+  optional uint64 last_touched_road_id = 3;
+  optional float last_touched_road_time = 4;
+}
+
+message Vec3 {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+message InputRequest {
+  bool forward = 1;
+  bool back = 2;
+  bool left = 3;
+  bool right = 4;
+  bool reset = 5;
+}
+
+message EmptyResponse {}
+
+service MarbleService {
+  rpc GetState(GetStateRequest) returns (StateResponse);
+  rpc Input(InputRequest) returns (EmptyResponse);
+}
+

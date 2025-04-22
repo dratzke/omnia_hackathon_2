@@ -16,4 +16,4 @@
 * python add default libs
 * low graphics mode if required
 * improve control
-* questionaire for hackathon groups
+* state for started

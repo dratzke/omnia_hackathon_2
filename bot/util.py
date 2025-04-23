@@ -47,7 +47,7 @@ def start_server_process(
     game_port: int,
     players: int,
     max_game_seconds: int,
-    server_executable: str = "../target/release/server"
+    server_executable: str = "../server"
 ) -> Optional[subprocess.Popen]:
     """
     Starts the server executable as a background process with specified arguments.
@@ -95,7 +95,7 @@ def start_client_process(
     client_port: int,
     player_name: str,
     grpc_port: int,
-    executable: str = "../target/release/client"
+    executable: str = "../client"
 ) -> Optional[subprocess.Popen]:
     """
     Starts the client application as a separate process.

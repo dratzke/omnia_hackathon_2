@@ -46,7 +46,7 @@ struct ClientArgs {
     #[clap(long, default_value_t = format!("127.0.0.1"))]
     server: String,
     /// Authentication port of the game server.
-    #[clap(long, default_value_t = 5000)]
+    #[clap(long, default_value_t = 4000)]
     auth_port: u16,
     /// Port used by the client for the bidirectional communication. Needs to be unqiue.
     #[clap(long, default_value_t = 5001)]

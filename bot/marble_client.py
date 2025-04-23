@@ -75,7 +75,7 @@ class MarbleClient:
             print(f"Error calling Input: {e}")
             return None  # Or raise the exception
 
-    def get_input_from_state(self, state: service_pb2.StateResponse) -> service_pb2.InputRequest:
+    def decision(self, state: service_pb2.StateResponse) -> service_pb2.InputRequest:
         """
         Determines the input to send based on the current state.
 
@@ -130,7 +130,7 @@ class MarbleClient:
                 break
 
             # 2. Determine the input based on the state
-            input_to_send = self.get_input_from_state(current_state)
+            input_to_send = self.decision(current_state)
 
             # 3. Send the input
             response = self.send_input(input_to_send)

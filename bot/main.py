@@ -30,7 +30,7 @@ def run():
     server = util.start_server_process(4000, 5000, 1, 30)
     client = util.start_client_process(4000, '127.0.0.1', 5001, 'A', 50051)
 
-    bot = marble_client.MarbleClient('localhost', '50051')
+    bot = marble_client.MarbleClient('localhost', '50051', 'raw_screens')
     bot.run_interaction_loop(100)
     df = bot.get_records_as_dataframe()
     df.to_csv('marble_client_records.csv', index=False)

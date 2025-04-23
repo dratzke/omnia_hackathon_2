@@ -15,7 +15,6 @@ use std::{
 
 use async_compat::Compat;
 use bevy::{prelude::*, tasks::IoTaskPool, window::CursorGrabMode};
-use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 use bevy_rapier3d::prelude::*;
 use clap::Parser;
 use config::shared_config;
@@ -34,12 +33,16 @@ use world::WorldPlugin;
 
 #[derive(Parser)]
 struct ServerArgs {
-    #[clap(long)]
+    /// port number used for authenticating clients to the server. If you run multiple servers concurrently each one needs a unqiue port number.
+    #[clap(long, default_value_t = 4000)]
     auth_port: u16,
-    #[clap(long)]
+    /// port number used for the game. If you run multiple servers concurrently each one needs a unique port number.
+    #[clap(long, default_value_t = 5000)]
     game_port: u16,
-    #[clap(long)]
+    /// Number of players expected to join. The game will start to run once the expected number of players have joined.
+    #[clap(long, default_value_t = 1)]
     players: u8,
+    /// Number of seconds the game will last at max. Once either every player has reached the finish line or this time has been reached, the rankings within the match will be calculated.
     #[clap(long, default_value_t = 120)]
     max_game_seconds: u32,
 }

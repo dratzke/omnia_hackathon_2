@@ -42,15 +42,20 @@ use world::WorldPlugin;
 
 #[derive(Parser)]
 struct ClientArgs {
-    #[clap(long)]
+    /// Ip address of the game server.
+    #[clap(long, default_value_t = format!("127.0.0.1"))]
     server: String,
-    #[clap(long)]
+    /// Authentication port of the game server.
+    #[clap(long, default_value_t = 5000)]
     auth_port: u16,
-    #[clap(long)]
+    /// Port used by the client for the bidirectional communication. Needs to be unqiue.
+    #[clap(long, default_value_t = 5001)]
     client_port: u16,
+    /// Port used to start a grpc server and remote control this client.
     #[clap(long)]
     grpc_port: Option<u16>,
-    #[clap(long)]
+    /// Player name chosen for the game.
+    #[clap(long, default_value_t = format!("Player1"))]
     name: String,
 }
 

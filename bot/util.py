@@ -26,7 +26,8 @@ def save_images_from_dataframe(
     os.makedirs(output_dir, exist_ok=True)
 
     for index, row in df.iterrows():
-        image_bytes = row['screen']
+        with open(row['screen'], 'rb') as f:
+            image_bytes = f.read()
 
         base_filename = f"image_{index:05d}"
 

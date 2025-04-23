@@ -6,3 +6,4 @@ bot/.venv
 bot/output_images
 bot/pylsp.log
 bot/proto/__pycache__
+bot/raw_screens

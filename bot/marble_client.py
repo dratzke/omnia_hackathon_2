@@ -2,6 +2,8 @@ import grpc
 import pandas as pd
 import logging
 import time
+import os
+import uuid
 
 # Note: You need to generate the Python protobuf files from your .proto file first.
 # Run the following command in your terminal in the directory containing marble.proto:
@@ -25,7 +27,7 @@ class MarbleClient:
     in a pandas DataFrame.
     """
 
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int, screen_dir: str):
         """
         Initializes the MarbleClient.
 
@@ -41,6 +43,8 @@ class MarbleClient:
         self.stub = service_pb2_grpc.MarbleServiceStub(self.channel)
         # List to store (state, input) tuples recorded during the loop
         self.records = []
+        self.screen_dir = screen_dir
+        os.makedirs(self.screen_dir, exist_ok=True)  # Ensure the directory exists
         print(f"MarbleClient initialized for {self.host}:{self.port}")
 
     def get_state(self) -> service_pb2.StateResponse:
@@ -98,10 +102,6 @@ class MarbleClient:
         right = False
         reset = False
 
-        # Example using state: maybe reset if finished?
-        # if state and state.finished:
-        #    reset = True
-        #    forward = False # Don't move forward if resetting
         time.sleep(0.2)
 
         return service_pb2.InputRequest(
@@ -139,11 +139,19 @@ class MarbleClient:
                 break
 
             # 4. Record the state and the input that was sent
-            self.records.append((current_state, input_to_send))
 
-            # Optional: Add a small delay if needed
-            # import time
-            # time.sleep(0.1)
+            screen_file = os.path.join(self.screen_dir, f"screen_{uuid.uuid4()}")
+            recorded_state = {
+                'screen': screen_file,
+                'linear_velocity': current_state.linear_velocity,
+                'angular_velocity': current_state.angular_velocity,
+                'finished': current_state.finished,
+                'results': current_state.results,
+            }
+            with open(screen_file, 'wb') as f:
+                f.write(current_state.screen)
+
+            self.records.append((recorded_state, input_to_send))
 
         print("Interaction loop finished.")
 
@@ -164,26 +172,26 @@ class MarbleClient:
                 return value if value is not None else pd.NA
 
             results_list = []
-            if state.results:
+            if state['results']:
                 results_list = [
                     {
                         'name': r.name,
                         'finish_time': get_optional_float(r.finish_time),
                         'last_touched_road_id': get_optional_uint64(r.last_touched_road_id),
                         'last_touched_road_time': get_optional_float(r.last_touched_road_time)
-                    } for r in state.results
+                    } for r in state['results']
                 ]
 
             data.append({
                 # State fields
-                'screen': state.screen,  # Keep as bytes, or process further if needed
-                'linear_velocity_x': state.linear_velocity.x,
-                'linear_velocity_y': state.linear_velocity.y,
-                'linear_velocity_z': state.linear_velocity.z,
-                'angular_velocity_x': state.angular_velocity.x,
-                'angular_velocity_y': state.angular_velocity.y,
-                'angular_velocity_z': state.angular_velocity.z,
-                'finished': state.finished,
+                'screen': state['screen'],  # Keep as bytes, or process further if needed
+                'linear_velocity_x': state['linear_velocity'].x,
+                'linear_velocity_y': state['linear_velocity'].y,
+                'linear_velocity_z': state['linear_velocity'].z,
+                'angular_velocity_x': state['angular_velocity'].x,
+                'angular_velocity_y': state['angular_velocity'].y,
+                'angular_velocity_z': state['angular_velocity'].z,
+                'finished': state['finished'],
                 'results': results_list,  # Store list of result dicts
 
                 # Input fields

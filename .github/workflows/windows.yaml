@@ -101,6 +101,7 @@ jobs:
         # Copy downloaded binaries
         cp artifacts/windows/client.exe release-package/
         cp artifacts/windows/server.exe release-package/
+        chmod +x artifacts/linux/client artifacts/linux/server  
         cp artifacts/linux/client release-package/
         cp artifacts/linux/server release-package/
         # Copy the assets folder from the checkout

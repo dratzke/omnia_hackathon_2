@@ -1,5 +1,5 @@
 import logging
-import image_util
+import util
 import marble_client
 
 # Import the generated modules
@@ -27,14 +27,14 @@ logger.setLevel(logging.INFO)
 
 
 def run():
-    server = image_util.start_server_process(4000, 5000, 1, 30)
-    client = image_util.start_client_process(4000, '127.0.0.1', 5001, 'A', 50051)
+    server = util.start_server_process(4000, 5000, 1, 30)
+    client = util.start_client_process(4000, '127.0.0.1', 5001, 'A', 50051)
 
     bot = marble_client.MarbleClient('localhost', '50051')
     bot.run_interaction_loop(100)
     df = bot.get_records_as_dataframe()
     df.to_csv('marble_client_records.csv', index=False)
-    image_util.save_images_from_dataframe(df)
+    util.save_images_from_dataframe(df)
 
     server.kill()
     client.kill()

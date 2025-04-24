@@ -60,6 +60,16 @@ run-both: build
     rm server.pid
     rm client1.pid
 
+run-both-one: build
+    # Start server in background, save PID, wait 5s, run client, then kill server
+    cp -r assets ./target/release/
+    ./target/release/server --auth-port 4000 --game-port 5000 --players 1 --max-game-seconds 20 & 
+    echo $$ > server.pid 
+    sleep 2 
+    ./target/release/client --auth-port 4000 --server 127.0.0.1 --client-port 5002 --name B
+    pkill -F server.pid
+    rm server.pid
+
 fowrard:
     grpcurl -d '{"forward": true, "back": false, "left": false, "right": false, "reset": false}' -plaintext '[::1]:50051' marble.MarbleService/Input
 back:

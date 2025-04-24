@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use bevy::{
     prelude::*,
     render::{mesh::Indices, render_asset::RenderAssetUsages, render_resource::PrimitiveTopology},
@@ -20,7 +18,11 @@ pub fn generate_mesh_for_block(block: BlockType) -> Mesh {
             length,
             height_change,
         } => generate_slope_mesh(length, height_change),
-        // _ => empty_mesh(),
+        BlockType::BankedTurn {
+            angle,
+            radius,
+            bank_height,
+        } => generate_banked_turn_mesh(angle, radius, bank_height), // _ => empty_mesh(),
     }
 }
 
@@ -158,6 +160,114 @@ fn generate_turn_mesh(angle: f32, radius: f32) -> Mesh {
     }
 
     create_mesh_from_attributes(vertices, indices, uvs, normals)
+}
+
+// Turn mesh - an arc segment with specified radius and angle
+fn generate_banked_turn_mesh(angle: f32, radius: f32, bank_height: f32) -> Mesh {
+    // Calculate number of segments based on angle
+    let segments = (angle.abs() * SEGMENTS_PER_RADIAN as f32).ceil() as u32;
+    let segments = segments.max(1); // At least 1 segment
+
+    let mut vertices = Vec::with_capacity(((segments + 1) * 2) as usize);
+    let mut uvs = Vec::with_capacity(((segments + 1) * 2) as usize);
+    let mut normals = Vec::with_capacity(((segments + 1) * 2) as usize);
+    let mut indices: Vec<u32> = Vec::with_capacity((segments * 6) as usize);
+
+    // Generate vertices along the arc
+    for i in 0..=segments {
+        let segment_angle = i as f32 / segments as f32 * angle;
+
+        let inner = rotate_point_around(
+            Vec2::new(-TRACK_WIDTH / 2.0, 0.0),
+            Vec2::new(radius, 0.0),
+            -segment_angle,
+        );
+        let outer = rotate_point_around(
+            Vec2::new(TRACK_WIDTH / 2.0, 0.0),
+            Vec2::new(radius, 0.0),
+            -segment_angle,
+        );
+
+        let bank_offset = sigmoid_peak(i as usize, segments as usize) * bank_height;
+        vertices.push([inner.x, 0.0 + bank_offset, inner.y]);
+        vertices.push([inner.x, 3.0 + bank_offset, inner.y]);
+        vertices.push([outer.x, 0.0, outer.y]);
+        vertices.push([outer.x, 3.0, outer.y]);
+        uvs.push([i as f32 / segments as f32, 0.0]);
+        uvs.push([i as f32 / segments as f32, 0.0]);
+        uvs.push([i as f32 / segments as f32, 1.0]);
+        uvs.push([i as f32 / segments as f32, 1.0]);
+        normals.push([0.0, 1.0, 0.0]);
+        normals.push([1.0, 0.0, 0.0]);
+        normals.push([0.0, 1.0, 0.0]);
+        normals.push([-1.0, 0.0, 0.0]);
+
+        // Add indices for the quad (two triangles)
+        if i < segments {
+            let base_index = i * 4;
+            indices.push(base_index + 0); // Current inner floor vertex
+            indices.push(base_index + 4); // Next inner floor vertex
+            indices.push(base_index + 2); // Current outer floor vertex
+
+            indices.push(base_index + 2); // Current outer floor vertex
+            indices.push(base_index + 4); // Next inner floor vertex
+            indices.push(base_index + 6); // Next outer floor vertex
+
+            indices.push(base_index + 0); // Current inner floor
+            indices.push(base_index + 1); // Current inner ceiling
+            indices.push(base_index + 4); // Next inner floor
+
+            indices.push(base_index + 1); // Current inner ceiling
+            indices.push(base_index + 5); // Next inner ceiling
+            indices.push(base_index + 4); // Next inner floor
+
+            indices.push(base_index + 2); // Current outer floor
+            indices.push(base_index + 6); // Next outer floor
+            indices.push(base_index + 3); // Current outer ceiling
+
+            indices.push(base_index + 3); // Current outer ceiling
+            indices.push(base_index + 6); // Next outer floor
+            indices.push(base_index + 7); // Next outer ceiling
+        }
+    }
+
+    create_mesh_from_attributes(vertices, indices, uvs, normals)
+}
+
+fn sigmoid_peak(i: usize, max: usize) -> f32 {
+    if i == 0 {
+        return 0.0;
+    }
+    if i == max {
+        return 0.0;
+    }
+
+    let max_f32 = max as f32;
+    let half_max = max_f32 / 2.0;
+    let i_f32 = i as f32;
+
+    zero_peak((i_f32 - half_max) / half_max)
+}
+
+fn zero_peak(x: f32) -> f32 {
+    // Calculate x^2 * 5
+    // We use powi(2) for integer power, which can be more efficient than powf(2.0)
+    // Alternatively, you could just write x * x
+    let exponent_term = x.powi(2) * 5.0;
+
+    // Calculate e^(exponent_term) using the exp() method
+    let exp_value = exponent_term.exp();
+
+    // Calculate 1 + e^(...)
+    let denominator = 1.0 + exp_value;
+
+    // Calculate 1 / (1 + e^(...))
+    let fraction = 1.0 / denominator;
+
+    // Calculate the final result * 2
+    let result = fraction * 2.0;
+
+    result // Return the result
 }
 
 // Slope mesh - a straight segment that changes height

@@ -1,4 +1,3 @@
-* banked turns block
 * spawn players next to one another
 * modifier pickup (magnet, gravity)
 * bumpy road block

@@ -10,9 +10,22 @@ pub struct BlockTransform {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BlockType {
-    Straight { length: f32 },
-    Turn { angle: f32, radius: f32 },
-    Slope { length: f32, height_change: f32 },
+    Straight {
+        length: f32,
+    },
+    Turn {
+        angle: f32,
+        radius: f32,
+    },
+    BankedTurn {
+        angle: f32,
+        radius: f32,
+        bank_height: f32,
+    },
+    Slope {
+        length: f32,
+        height_change: f32,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -105,7 +118,8 @@ impl Track {
         for _ in 0..100 {
             let next_block = track.select_next_block();
             match next_block {
-                BlockType::Turn { angle, .. } => track.turn_since_down += angle,
+                BlockType::Turn { angle, .. } => track.turn_since_down += angle.abs(),
+                BlockType::BankedTurn { angle, .. } => track.turn_since_down += angle.abs(),
                 BlockType::Slope { .. } => track.turn_since_down = 0.0,
                 _ => (),
             }
@@ -147,9 +161,9 @@ impl Track {
     }
 
     fn select_next_block(&self) -> BlockType {
-        if self.turn_since_down > 1.4 * PI {
+        if self.turn_since_down > 1.0 * PI {
             return BlockType::Slope {
-                length: 15.0,
+                length: 25.0,
                 height_change: -((self.noise.get([
                     self.current_end.position.y as f64 * 0.3,
                     self.current_end.position.x as f64 * 0.3,
@@ -161,8 +175,8 @@ impl Track {
         let noise_value = self.noise.get([self.segments.len() as f64 * 0.3, 0.0]);
 
         match (noise_value).abs() {
-            v if v < 0.3 => BlockType::Straight { length: 10.0 },
-            v if v < 0.6 => {
+            v if v < 0.2 => BlockType::Straight { length: 10.0 },
+            v if v < 0.4 => {
                 let r = (self.noise.get([
                     self.current_end.position.x as f64 * 0.3,
                     self.current_end.position.y as f64 * 0.3,
@@ -172,6 +186,19 @@ impl Track {
                 BlockType::Turn {
                     angle,
                     radius: self.turn_radius(),
+                }
+            }
+            v if v < 0.6 => {
+                let r = (self.noise.get([
+                    self.current_end.position.x as f64 * 0.3,
+                    self.current_end.position.y as f64 * 0.3,
+                ]) as f32)
+                    .abs();
+                let angle = PI * r + 0.3;
+                BlockType::BankedTurn {
+                    angle,
+                    radius: self.turn_radius(),
+                    bank_height: angle / PI * 4.0,
                 }
             }
             _ => BlockType::Slope {
@@ -244,6 +271,18 @@ impl Track {
                         + self.current_end.rotation * Vec3::new(0.0, *height_change, *length),
                     rotation,
                 }
+            }
+            BlockType::BankedTurn { angle, radius, .. } => {
+                let rotation = Quat::from_rotation_y(*angle) * self.current_end.rotation;
+                // let angle = angle + PI;
+
+                let position_offset =
+                    rotate_point_around(Vec2::ZERO, Vec2::new(*radius, 0.0), -angle);
+                let position = self.current_end.position
+                    + self.current_end.rotation
+                        * Vec3::new(position_offset.x, 0.0, position_offset.y);
+
+                BlockTransform { position, rotation }
             }
         }
     }

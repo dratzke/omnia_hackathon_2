@@ -6,13 +6,14 @@ import subprocess
 import shlex
 from typing import Optional
 import time
+import tqdm
 
 
 def save_images_from_dataframe(
     df: pd.DataFrame,
+    output_dir: str,
     width: int = 1280,
     height: int = 720,
-    output_dir: str = "output_images",
     prefix: str = 'image_'
 ) -> None:
     """
@@ -25,7 +26,7 @@ def save_images_from_dataframe(
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    for index, row in df.iterrows():
+    for index, row in tqdm.tqdm(df.iterrows(), total=len(df), desc="Saving images"):
         with open(row['screen'], 'rb') as f:
             image_bytes = f.read()
 
@@ -37,7 +38,6 @@ def save_images_from_dataframe(
         try:
             image = Image.frombuffer('RGBA', (width, height), image_bytes, 'raw', 'RGBA', 0, 1)
             image.save(filepath, format='PNG')
-            print(f"Saved {filepath}")
 
         except Exception as e:
             print(f"Error processing row {index}: {e}")
@@ -48,6 +48,9 @@ def start_server_process(
     game_port: int,
     players: int,
     max_game_seconds: int,
+    seed: int,
+    low_gpu: bool,
+    headless: bool,
     server_executable: str = "../server"
 ) -> Optional[subprocess.Popen]:
     """
@@ -69,8 +72,14 @@ def start_server_process(
         "--auth-port", str(auth_port),
         "--game-port", str(game_port),
         "--players", str(players),
+        "--seed", str(seed),
         "--max-game-seconds", str(max_game_seconds),
     ]
+    if low_gpu:
+        command.append("--low-gpu")
+
+    if headless:
+        command.append("--headless")
 
     try:
         process = subprocess.Popen(
@@ -96,6 +105,8 @@ def start_client_process(
     client_port: int,
     player_name: str,
     grpc_port: int,
+    seed: int,
+    low_gpu: bool,
     executable: str = "../client"
 ) -> Optional[subprocess.Popen]:
     """
@@ -121,7 +132,11 @@ def start_client_process(
         "--client-port", str(client_port),
         "--grpc-port", str(grpc_port),
         "--name", player_name,
+        "--seed", str(seed),
     ]
+
+    if low_gpu:
+        command.append("--low-gpu")
 
     try:
         process = subprocess.Popen(

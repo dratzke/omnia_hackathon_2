@@ -2,7 +2,14 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use lightyear::prelude::{Replicated, client::Predicted, server::ControlledBy, server::Replicate};
+use lightyear::{
+    prelude::{
+        Replicated,
+        client::Predicted,
+        server::{ControlledBy, Replicate},
+    },
+    shared::replication::components::Controlled,
+};
 
 use crate::{
     protocol::{Finish, GameResult, PlayerColor, PlayerName, PlayerPosition, VelocityShare},
@@ -119,20 +126,34 @@ fn attach_player_model_server(
 
 fn attach_player_model_client(
     player_query: Query<
-        (&PlayerPosition, &PlayerColor, Entity),
+        (
+            &PlayerPosition,
+            &PlayerColor,
+            Entity,
+            Option<&Controlled>,
+            Option<&lightyear::client::interpolation::Interpolated>,
+        ),
         (Without<Transform>, Without<Predicted>),
     >,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (position, color, entity) in player_query.iter() {
+    for (position, color, entity, controlled_by, interpolated) in player_query.iter() {
+        let material = if controlled_by.is_some() {
+            materials.add(Color::oklab(1.0, 0.2, 0.2))
+        } else {
+            if interpolated.is_none() {
+                continue;
+            }
+            commands.get_entity(entity).unwrap().log_components();
+            materials.add(color.0)
+        };
         commands.get_entity(entity).unwrap().insert((
             Mesh3d(meshes.add(Sphere::new(0.5))),
-            MeshMaterial3d(materials.add(color.0)),
+            MeshMaterial3d(material),
             Transform::from_translation(position.0),
         ));
-        commands.get_entity(entity).unwrap().log_components();
     }
 }
 

@@ -34,7 +34,7 @@ use server::{IoConfig, NetConfig, NetcodeConfig, ServerCommands, ServerConfig, S
 use server_cam::{CameraController, CameraControllerPlugin};
 use server_input::ServerInputPlugin;
 use tokio::io::AsyncWriteExt;
-use world::WorldPlugin;
+use world::{LowGpu, Seed, WorldPlugin};
 
 #[derive(Parser)]
 struct ServerArgs {
@@ -50,6 +50,15 @@ struct ServerArgs {
     /// Number of seconds the game will last at max. Once either every player has reached the finish line or this time has been reached, the rankings within the match will be calculated.
     #[clap(long, default_value_t = 120)]
     max_game_seconds: u32,
+    /// The seed for the game world. Needs to match between server and client to ensure that both have the same view of the world.
+    #[clap(long, default_value_t = 1234)]
+    seed: u32,
+    #[clap(long)]
+    /// Disables the physically based rendering materials to lower the gpu resource consumption. (This also disables the transparency of the ice road)
+    low_gpu: bool,
+    /// Avoids drawing the game.
+    #[clap(long)]
+    headless: bool,
 }
 
 pub fn main() {
@@ -65,11 +74,15 @@ pub fn main() {
         auth_server_addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, auth_port)),
         player_count: args.players,
         max_game_seconds: args.max_game_seconds,
+        seed: args.seed,
+        low_gpu: args.low_gpu,
+        headless: args.headless,
     };
 
     let mut app = App::new();
     app.add_plugins(server_plugin);
     app.run();
+    dbg!("closing");
 }
 
 fn get_key() -> [u8; PRIVATE_KEY_BYTES] {
@@ -78,13 +91,16 @@ fn get_key() -> [u8; PRIVATE_KEY_BYTES] {
     b
 }
 
-pub struct ServerPlugin {
-    pub protocol_id: u64,
-    pub private_key: Key,
-    pub game_server_addr: SocketAddr,
-    pub auth_server_addr: SocketAddr,
-    pub player_count: u8,
-    pub max_game_seconds: u32,
+struct ServerPlugin {
+    protocol_id: u64,
+    private_key: Key,
+    game_server_addr: SocketAddr,
+    auth_server_addr: SocketAddr,
+    player_count: u8,
+    max_game_seconds: u32,
+    seed: u32,
+    low_gpu: bool,
+    headless: bool,
 }
 #[derive(Resource)]
 struct ClientIds(Arc<RwLock<HashMap<u64, Entity>>>);
@@ -92,11 +108,23 @@ struct ClientIds(Arc<RwLock<HashMap<u64, Entity>>>);
 impl Plugin for ServerPlugin {
     fn build(&self, app: &mut App) {
         let client_ids = Arc::new(RwLock::new(HashMap::<u64, Entity>::new()));
-        app.add_plugins(DefaultPlugins);
+        if self.headless {
+            app.add_plugins(DefaultPlugins.set(WindowPlugin {
+                primary_window: None,
+                exit_condition: bevy::window::ExitCondition::DontExit,
+                close_when_requested: false,
+                ..default()
+            }));
+        } else {
+            app.add_plugins(DefaultPlugins);
+        }
+
         app.add_plugins(build_server_plugin(
             self.game_server_addr.port(),
             self.private_key,
         ));
+        app.insert_resource(Seed(self.seed));
+        app.insert_resource(LowGpu(self.low_gpu));
         app.add_plugins(ProtocolPlugin);
         app.add_plugins(PlayerPlugin {
             physics: true,
@@ -106,9 +134,15 @@ impl Plugin for ServerPlugin {
         app.add_plugins(ServerInputPlugin);
         app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());
         app.add_plugins(WorldPlugin { physics: true });
-        app.add_plugins(CameraControllerPlugin);
+        if !self.headless {
+            app.add_plugins(CameraControllerPlugin);
+        }
 
-        app.add_systems(Startup, start_server);
+        if self.headless {
+            app.add_systems(Startup, start_server_headless);
+        } else {
+            app.add_systems(Startup, start_server);
+        }
         app.insert_resource(ClientIds(client_ids.clone()));
 
         app.add_observer(handle_disconnect_event);
@@ -169,6 +203,9 @@ fn start_server(mut commands: Commands, mut windows: Query<&mut Window>) {
     window.cursor_options.visible = false;
 }
 
+fn start_server_headless(mut commands: Commands, mut windows: Query<&mut Window>) {
+    commands.start_server();
+}
 fn handle_disconnect_event(trigger: Trigger<DisconnectEvent>, client_ids: Res<ClientIds>) {
     if let Netcode(client_id) = trigger.event().client_id {
         client_ids.0.write().unwrap().remove(&client_id);

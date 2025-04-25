@@ -27,7 +27,7 @@ class MarbleClient:
     in a pandas DataFrame.
     """
 
-    def __init__(self, host: str, port: int, screen_dir: str):
+    def __init__(self, host: str, port: int, screen_dir: str, name: str):
         """
         Initializes the MarbleClient.
 
@@ -37,6 +37,7 @@ class MarbleClient:
         """
         self.host = host
         self.port = port
+        self.name = name
         # Create an insecure channel to connect to the server
         self.channel = grpc.insecure_channel(f'{self.host}:{self.port}')
         # Create a stub (client) for the MarbleService
@@ -112,7 +113,7 @@ class MarbleClient:
             reset=reset
         )
 
-    def run_interaction_loop(self, iterations: int = 10):
+    def run_interaction_loop(self):
         """
         Runs a loop that repeatedly gets state, determines input, sends input,
         and records the state/input pair.
@@ -120,10 +121,7 @@ class MarbleClient:
         Args:
             iterations: The number of times to run the get_state/send_input cycle.
         """
-        print(f"Starting interaction loop for {iterations} iterations...")
-        for i in range(iterations):
-            print(f"Iteration {i + 1}/{iterations}")
-            # 1. Get the current state
+        while True:
             current_state = self.get_state()
             if current_state is None:
                 print("Failed to get state, stopping loop.")
@@ -152,6 +150,15 @@ class MarbleClient:
                 f.write(current_state.screen)
 
             self.records.append((recorded_state, input_to_send))
+            if current_state.finished:
+                for index, result in enumerate(current_state.results):
+                    if result.name == self.name:
+                        # Assuming result.name is a string, adjust as necessary
+                        print(f"Result {index}: {result.name}, Finish Time: {result.finish_time}, "
+                              f"Last Touched Road ID: {result.last_touched_road_id}, "
+                              f"Last Touched Road Time: {result.last_touched_road_time}")
+                print("Marble finished, stopping loop.")
+                break
 
         print("Interaction loop finished.")
 

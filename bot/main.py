@@ -1,12 +1,14 @@
 import logging
 import util
 import marble_client
+import click
+import subprocess
+from typing import Optional
+from concurrent.futures import ProcessPoolExecutor
+
 
 # Import the generated modules
-log_format = '%(asctime)s - %(levelname)s - %(message)s - [%(exception_info)s]'
-logging.basicConfig(level=logging.INFO, format=log_format)
-
-log_format = '%(asctime)s - %(levelname)s - %(message)s - [ExceptionType: %(exc_type)s] - [ExceptionMsg: %(exc_msg)s]'
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
 
 
 class SafeFormatter(logging.Formatter):
@@ -18,7 +20,6 @@ class SafeFormatter(logging.Formatter):
 
 # Configure logging using the custom formatter
 handler = logging.StreamHandler()
-handler.setFormatter(SafeFormatter(log_format))
 
 logger = logging.getLogger()
 logger.handlers.clear()
@@ -26,18 +27,38 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 
-def run():
-    server = util.start_server_process(4000, 5000, 1, 30)
-    client = util.start_client_process(4000, '127.0.0.1', 5001, 'A', 50051)
+@click.command()
+@click.option('--no-server', default=False, is_flag=True, help='Do not start the server')
+@click.option('--clients', default=1, help='Number of clients to start')
+@click.option('--game-seconds', default=30, help='Time the game runs until a winner is declared')
+@click.option('--seed', default=1234, help='Seed for the game world generation')
+@click.option('--server-headless', default=False, is_flag=True, help='Run the server in headless mode')
+def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_headless: bool):
+    if not no_server:
+        server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless)
 
-    bot = marble_client.MarbleClient('localhost', '50051', 'raw_screens')
-    bot.run_interaction_loop(100)
+    with ProcessPoolExecutor(max_workers=clients) as executor:
+        list(executor.map(run_client, [(i, seed) for i in range(clients)]))
+    if server:
+        server.kill()
+
+
+def run_client(args: (int, int)) -> Optional[subprocess.Popen]:
+    client_id, seed = args
+    name = 'A' + str(client_id)
+    client = util.start_client_process(4000, '127.0.0.1', 5001 + client_id, name, 50051 + client_id, seed, False)
+
+    bot = marble_client.MarbleClient('localhost', str(50051 + client_id), 'raw_screens_' + str(client_id), name)
+    bot.run_interaction_loop()
     df = bot.get_records_as_dataframe()
-    df.to_csv('marble_client_records.csv', index=False)
-    util.save_images_from_dataframe(df)
+    df.to_parquet(f'marble_client_records_{client_id}.csv', index=False)
+    util.save_images_from_dataframe(df, f'output_images_{client_id}')
 
-    server.kill()
-    client.kill()
+    if client:
+        client.kill()
+        logger.info(f'Client {client.pid} killed')
+    else:
+        logger.error('Client process failed to start or was None')
 
 
 if __name__ == '__main__':

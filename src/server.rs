@@ -14,7 +14,12 @@ use std::{
 };
 
 use async_compat::Compat;
-use bevy::{prelude::*, tasks::IoTaskPool, window::CursorGrabMode};
+use bevy::{
+    core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
+    prelude::*,
+    tasks::IoTaskPool,
+    window::CursorGrabMode,
+};
 use bevy_rapier3d::prelude::*;
 use clap::Parser;
 use config::shared_config;
@@ -150,6 +155,12 @@ fn start_server(mut commands: Commands, mut windows: Query<&mut Window>) {
     commands.spawn((
         CameraController,
         Camera3d::default(),
+        Camera {
+            hdr: true,
+            ..Default::default()
+        },
+        Bloom::NATURAL,
+        Tonemapping::TonyMcMapface,
         Transform::from_xyz(0.0, 10.0, -10.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 

@@ -1,8 +1,4 @@
-use bevy::{
-    asset::RenderAssetUsages,
-    prelude::*,
-    render::mesh::{Indices, PrimitiveTopology},
-};
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
 use crate::{
@@ -98,7 +94,6 @@ fn spawn_world(
                 crate::track_gen::RoadType::Ice => 0.3,
             };
 
-            let modifier = segment.modifier.clone();
             e.insert((
                 collider,
                 ActiveEvents::COLLISION_EVENTS,
@@ -106,7 +101,6 @@ fn spawn_world(
                     coefficient: friciton,
                     combine_rule: CoefficientCombineRule::Min,
                 },
-                ModifierTrigger(modifier),
             ));
         }
 
@@ -115,7 +109,9 @@ fn spawn_world(
                 &mut commands,
                 &mut meshes,
                 &mut materials,
-                segment.transform.position + Vec3::Y * 5.0,
+                segment.transform.position + Vec3::Y * 1.0,
+                segment.modifier,
+                physics.0,
             );
         }
     }
@@ -146,58 +142,41 @@ fn spawn_gravity_booster_marker(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     position: Vec3,
+    modifier: BallModifier,
+    physics: bool,
 ) {
-    // Create a custom pyramid mesh
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleList,
-        RenderAssetUsages::RENDER_WORLD,
-    );
-
-    // Define vertices for a downward-facing pyramid
-    // The pyramid's apex is at the bottom (pointing downward)
-    let vertices = vec![
-        // Top square
-        [-1.0, 1.0, -1.0], // top-left-back
-        [1.0, 1.0, -1.0],  // top-right-back
-        [1.0, 1.0, 1.0],   // top-right-front
-        [-1.0, 1.0, 1.0],  // top-left-front
-        // Bottom apex (pointing downward)
-        [0.0, -1.0, 0.0], // apex
-    ];
-
-    // Define indices (which vertices make up each triangle)
-    let indices = vec![
-        // Top face (square)
-        0, 2, 1, 0, 3, 2, // Side triangular faces
-        0, 1, 4, // back-left face
-        1, 2, 4, // back-right face
-        2, 3, 4, // front-right face
-        3, 0, 4, // front-left face
-    ];
-
-    // Set vertex positions
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
-
-    // Set vertex indices
-    mesh.insert_indices(Indices::U32(indices));
-
-    // Compute normals automatically
-    mesh.duplicate_vertices();
-    mesh.compute_flat_normals();
-
-    // Create a yellow material
-    let yellow_material = materials.add(StandardMaterial {
-        base_color: Color::oklab(0.83, -0.01, 0.16),
-        // Use default values for other properties
-        ..default()
-    });
-
-    // Spawn the pyramid
-    commands.spawn((
-        Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
-        MeshMaterial3d(yellow_material),
-        Transform::IDENTITY.with_translation(position),
-    ));
+    let yellow_material = if physics {
+        materials.add(StandardMaterial {
+            base_color: Color::oklab(0.83, -0.01, 0.16).with_alpha(0.6),
+            emissive: LinearRgba::rgb(150.0, 0.0, 0.0),
+            alpha_mode: AlphaMode::Blend,
+            ..default()
+        })
+    } else {
+        materials.add(StandardMaterial {
+            base_color: Color::oklab(0.83, -0.01, 0.16).with_alpha(0.6),
+            alpha_mode: AlphaMode::Blend,
+            ..default()
+        })
+    };
+    if physics {
+        commands.spawn((
+            Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+            MeshMaterial3d(yellow_material),
+            Transform::IDENTITY.with_translation(position),
+            ModifierTrigger(modifier),
+            Collider::cuboid(0.5, 0.5, 0.5),
+            Sensor,
+            ActiveEvents::COLLISION_EVENTS,
+        ));
+    } else {
+        commands.spawn((
+            Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+            MeshMaterial3d(yellow_material),
+            Transform::IDENTITY.with_translation(position),
+            ModifierTrigger(modifier),
+        ));
+    }
 }
 
 fn material_for_segment(segment: &TrackSegment, asset_server: &AssetServer) -> StandardMaterial {
@@ -233,8 +212,12 @@ fn material_for_segment(segment: &TrackSegment, asset_server: &AssetServer) -> S
     }
 }
 
-fn apply_gravity_modification(mut query: Query<(&mut GravityScale, &GravityModifier)>) {
-    for (mut scale, modifier) in query.iter_mut() {
+fn apply_gravity_modification(
+    mut query: Query<(&mut GravityScale, &mut GravityModifier)>,
+    time: Res<Time>,
+) {
+    for (mut scale, mut modifier) in query.iter_mut() {
+        modifier.remaining.tick(time.delta());
         if modifier.remaining.finished() {
             scale.0 = modifier.base_gravity;
         } else {
@@ -248,7 +231,8 @@ fn collision_system(
     mut players: Query<(&mut LastTouched, &mut GravityModifier), With<PlayerPosition>>,
     goal_query: Query<Entity, With<GoalLine>>,
     player_query: Query<Entity, With<PlayerPosition>>,
-    track_segments: Query<(&TrackSegmentId, &ModifierTrigger)>,
+    collision_modifiers: Query<&ModifierTrigger>,
+    track_segments: Query<&TrackSegmentId>,
     time: Res<Time>,
     mut commands: Commands,
     mut end_conditon: ResMut<GameEndCondition>,
@@ -272,6 +256,7 @@ fn collision_system(
                         *entity2,
                         &mut players,
                         &track_segments,
+                        &collision_modifiers,
                         &time,
                     );
                     process_potential_collision(
@@ -279,6 +264,7 @@ fn collision_system(
                         *entity1,
                         &mut players,
                         &track_segments,
+                        &collision_modifiers,
                         &time,
                     );
                 }
@@ -307,12 +293,13 @@ fn process_potential_collision(
     potential_player: Entity,
     potential_track: Entity,
     players: &mut Query<(&mut LastTouched, &mut GravityModifier), With<PlayerPosition>>,
-    track_segments: &Query<(&TrackSegmentId, &ModifierTrigger)>,
+    track_segments: &Query<&TrackSegmentId>,
+    collision_modifiers: &Query<&ModifierTrigger>,
     time: &Res<Time>,
 ) {
     // Only proceed if the entities match our requirements
     if let Ok((mut last_touched, mut gravity_modifier)) = players.get_mut(potential_player) {
-        if let Ok((track_segment_id, modifier_trigger)) = track_segments.get(potential_track) {
+        if let Ok(track_segment_id) = track_segments.get(potential_track) {
             // Update the LastTouchedId if the new id is higher
             if track_segment_id.0 > last_touched.road_id {
                 last_touched.road_id = track_segment_id.0;
@@ -321,8 +308,9 @@ fn process_potential_collision(
             // Update the LastTouchTime to the current time
             last_touched.at = time.elapsed_secs();
             last_touched.touching = true;
-
-            match modifier_trigger.0 {
+        }
+        if let Ok(modifiers) = collision_modifiers.get(potential_track) {
+            match modifiers.0 {
                 BallModifier::GravityChange { strength, duration } => {
                     gravity_modifier.remaining =
                         Timer::from_seconds(duration.as_secs_f32(), TimerMode::Once);
@@ -338,22 +326,14 @@ fn process_potential_collision_stop(
     potential_player: Entity,
     potential_track: Entity,
     players: &mut Query<(&mut LastTouched, &mut GravityModifier), With<PlayerPosition>>,
-    track_segments: &Query<(&TrackSegmentId, &ModifierTrigger)>,
+    track_segments: &Query<&TrackSegmentId>,
     time: &Res<Time>,
 ) {
     // Only proceed if the entities match our requirements
-    if let Ok((mut last_touch, mut gravity_modifier)) = players.get_mut(potential_player) {
-        if let Ok((_, modifier_trigger)) = track_segments.get(potential_track) {
+    if let Ok((mut last_touch, _)) = players.get_mut(potential_player) {
+        if let Ok(_) = track_segments.get(potential_track) {
             last_touch.touching = false;
             last_touch.at = time.elapsed_secs();
-            match modifier_trigger.0 {
-                BallModifier::GravityChange { strength, duration } => {
-                    gravity_modifier.remaining =
-                        Timer::from_seconds(duration.as_secs_f32(), TimerMode::Once);
-                    gravity_modifier.current = strength;
-                }
-                BallModifier::None => (),
-            }
         }
     }
 }

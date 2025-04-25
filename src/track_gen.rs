@@ -34,7 +34,7 @@ pub enum RoadType {
     Ice,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum BallModifier {
     GravityChange { strength: f32, duration: Duration },
     None,
@@ -77,6 +77,24 @@ impl Track {
         track.append_block(
             BlockType::Straight { length: 10.0 },
             RoadType::Asphalt,
+            BallModifier::GravityChange {
+                strength: 10.0,
+                duration: Duration::from_secs(10),
+            },
+        );
+        track.append_block(
+            BlockType::Straight { length: 10.0 },
+            RoadType::Asphalt,
+            BallModifier::None,
+        );
+        track.append_block(
+            BlockType::Straight { length: 10.0 },
+            RoadType::Asphalt,
+            BallModifier::None,
+        );
+        track.append_block(
+            BlockType::Straight { length: 10.0 },
+            RoadType::Asphalt,
             BallModifier::None,
         );
         track.append_block(
@@ -84,6 +102,17 @@ impl Track {
                 length: 10.0,
                 height_change: -10.0,
             },
+            RoadType::Asphalt,
+            BallModifier::None,
+        );
+
+        track.append_block(
+            BlockType::Straight { length: 10.0 },
+            RoadType::Asphalt,
+            BallModifier::None,
+        );
+        track.append_block(
+            BlockType::Straight { length: 10.0 },
             RoadType::Asphalt,
             BallModifier::None,
         );
@@ -140,12 +169,12 @@ impl Track {
             let modifier = if track
                 .noise
                 .get([
-                    40.0 * PI as f64 + track.current_end.position.x as f64 * 0.5,
-                    40.0 * PI as f64 + track.current_end.position.y as f64 * 0.5,
-                    40.0 * PI as f64 + track.current_end.position.z as f64 * 0.5,
+                    40.0 * PI as f64 + track.current_end.position.x as f64,
+                    40.0 * PI as f64 + track.current_end.position.y as f64,
+                    40.0 * PI as f64 + track.current_end.position.z as f64,
                 ])
                 .abs()
-                > 0.9
+                > 0.7
             {
                 BallModifier::GravityChange {
                     strength: 4.0,

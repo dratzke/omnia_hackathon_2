@@ -77,6 +77,8 @@ sudo apt-get install --no-install-recommends 'libasound2-dev' 'libudev-dev' 'lib
 
 ### Game Controls
 When playing the game there are 5 different actions you can perform. (You can apply them in parallel)
+In the game world, there are orange glowing cubes. If you touch them, your marble will experience greatly increased gravity.
+The goal 'line' is represented by a black transparent cube on the last road block, touching it counts as crossing the ginish line.
 
 CLient:
 ```
@@ -92,6 +94,10 @@ w/s => move the camera in the direction it is facing
 a/d => move the camera left/right, facing the same direction
 e/c => move the camera up/down, regardless of the camera direction
 ```
+
+### How to play the game manually?
+You will need to first start the server and then the client.
+Both executables (server/client on linux and server.exe/client.exe) have some command line parameters but for a simple one player game of up to 2 minutes you can simply run the executables without arguments to start them.
 
 ### GRPC / agent control
 There are two methods you use when controlling the client with an agent: `GetState` and `Input`.
@@ -129,12 +135,6 @@ The function `MarbleClient.decision` is currently responsible for deciding which
 ```bash
 uv run python main.py
 ```
-
-### How to play the game manually?
-You will need to first start the server and then the client.
-Both executables (server/client on linux and server.exe/client.exe) have some command line parameters but for a simple one player game of up to 2 minutes you can simply run the executables without arguments to start them.
-
-
 
 ### Cli args
 ```

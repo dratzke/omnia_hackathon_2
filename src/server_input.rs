@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f32::consts::PI};
+use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -7,6 +7,7 @@ use server::InputEvent;
 
 use crate::{
     ClientIds,
+    player::LastVelocity,
     protocol::{Inputs, PlayerPosition},
     world::LastTouched,
 };
@@ -21,7 +22,12 @@ impl Plugin for ServerInputPlugin {
 }
 
 fn movement(
-    mut position_query: Query<(&mut Velocity, &mut ExternalForce, &LastTouched)>,
+    mut position_query: Query<(
+        &mut Velocity,
+        &mut ExternalForce,
+        &LastTouched,
+        &mut LastVelocity,
+    )>,
     mut input_reader: EventReader<InputEvent<Inputs>>,
     client_ids: Res<ClientIds>,
     time: Res<Time>,
@@ -31,10 +37,11 @@ fn movement(
         if let Some(input) = input.input() {
             let client_ids = client_ids.0.read().unwrap();
             if let Some(player_entity) = client_ids.get(&client_id.to_bits()) {
-                if let Ok((velocity, force, last_touched)) = position_query.get_mut(*player_entity)
+                if let Ok((velocity, force, last_touched, last_velocity)) =
+                    position_query.get_mut(*player_entity)
                 {
                     if time.elapsed_secs() - last_touched.at < 1.0 || last_touched.touching {
-                        torque_fucntion(velocity, force, input);
+                        torque_fucntion(velocity, force, last_velocity, input);
                     }
                 }
             }
@@ -42,8 +49,19 @@ fn movement(
     }
 }
 
-fn torque_fucntion(mut velocity: Mut<Velocity>, mut force: Mut<ExternalForce>, input: &Inputs) {
-    let lin = velocity.linvel.normalize();
+fn torque_fucntion(
+    mut velocity: Mut<Velocity>,
+    mut force: Mut<ExternalForce>,
+    mut last_velocity: Mut<LastVelocity>,
+    input: &Inputs,
+) {
+    let lin = if velocity.linvel.length() < 0.1 {
+        last_velocity.lin.unwrap_or(velocity.linvel.normalize())
+    } else {
+        let l = velocity.linvel.normalize();
+        last_velocity.lin = Some(l);
+        l
+    };
     let multiplier = 2.0f32;
     let up = Vec3::Y;
 

@@ -37,6 +37,11 @@ pub struct SpawnedPlayersCount {
     pub max: u8,
 }
 
+#[derive(Component)]
+pub struct LastVelocity {
+    pub lin: Option<Vec3>,
+}
+
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         if self.physics {
@@ -115,7 +120,8 @@ fn attach_player_model_server(
                     base_gravity: 1.0,
                     remaining: Timer::from_seconds(0.0, TimerMode::Once),
                     current: 1.0,
-                });
+                })
+                .insert(LastVelocity { lin: None });
         }
         if c != 0 {
             game_end_condition.physics_start_time = time.elapsed_secs() as u32;

@@ -59,6 +59,9 @@ struct ServerArgs {
     /// Avoids drawing the game.
     #[clap(long)]
     headless: bool,
+    /// Server ip addes. Only required for allowing remote clients to connect to the server. Should match the ip address of your machine in the local network
+    #[clap(long)]
+    server_ip: Option<String>,
 }
 
 pub fn main() {
@@ -67,10 +70,15 @@ pub fn main() {
     let game_port = args.game_port;
     let key = get_key();
 
+    let game_server_addr = match args.server_ip {
+        Some(a) => format!("{a}:{game_port}").parse().unwrap(),
+        None => SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, game_port)),
+    };
+
     let server_plugin = ServerPlugin {
         protocol_id: 0,
         private_key: key,
-        game_server_addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, game_port)),
+        game_server_addr,
         auth_server_addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, auth_port)),
         player_count: args.players,
         max_game_seconds: args.max_game_seconds,

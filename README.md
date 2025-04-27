@@ -79,15 +79,19 @@ sudo apt-get install --no-install-recommends 'libasound2-dev' 'libudev-dev' 'lib
 When playing the game there are 5 different actions you can perform. (You can apply them in parallel)
 
 CLient:
+```
 w/s(or up/down) => apply a torque in/against the direction the marble is currently moving
 a/d (or left/right) => apply torque to the left/right in relation to the current direction of movement
 spacebar => brake, set the current angular velocity to (0|0|0)
+```
 
 Server:
+```
 ESC => lock/unlock the mouse to the screen, allows you to rotate the camera 
 w/s => move the camera in the direction it is facing
 a/d => move the camera left/right, facing the same direction
 e/c => move the camera up/down, regardless of the camera direction
+```
 
 ### GRPC / agent control
 There are two methods you use when controlling the client with an agent: `GetState` and `Input`.
@@ -151,6 +155,8 @@ Options:
           Disables the physically based rendering materials to lower the gpu resource consumption. (This also disables the transparency of the ice road)
       --headless
           Avoids drawing the game
+      --server-ip <SERVER_IP>
+          Server ip addes. Only required for allowing remote clients to connect to the server. Should match the ip address of your machine in the local network
   -h, --help
           Print help
 ```

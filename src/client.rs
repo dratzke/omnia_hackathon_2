@@ -38,7 +38,7 @@ use player::PlayerPlugin;
 use player_input::PlayerInputPlugin;
 use protocol::{GameResult, Inputs, PlayerName, ProtocolPlugin, VelocityShare};
 use tokio::sync::{Mutex, oneshot};
-use world::WorldPlugin;
+use world::{LowGpu, Seed, WorldPlugin};
 
 #[derive(Parser)]
 struct ClientArgs {
@@ -57,6 +57,12 @@ struct ClientArgs {
     /// Player name chosen for the game.
     #[clap(long, default_value_t = format!("Player1"))]
     name: String,
+    /// The seed for the game world. Needs to match between server and client to ensure that both have the same view of the world.
+    #[clap(long, default_value_t = 1234)]
+    seed: u32,
+    /// Disables the physically based rendering materials to lower the gpu resource consumption. (This also disables the transparency of the ice road)
+    #[clap(long)]
+    low_gpu: bool,
 }
 
 pub fn main() {
@@ -97,6 +103,8 @@ pub fn main() {
         linear_velocity,
         angular_velocity,
         results,
+        seed: args.seed,
+        low_gpu: args.low_gpu,
     });
     app.run();
     // server_thread.join().unwrap();
@@ -117,6 +125,8 @@ struct MyClientPlugin {
     results: Arc<Mutex<Vec<ResultEntry>>>,
 
     name: String,
+    seed: u32,
+    low_gpu: bool,
 }
 
 #[derive(Resource)]
@@ -132,9 +142,21 @@ struct ControlViaGrpc {
 
 impl Plugin for MyClientPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(DefaultPlugins);
+        if self.grpc {
+            app.add_plugins(DefaultPlugins.set(WindowPlugin {
+                primary_window: None,
+                exit_condition: bevy::window::ExitCondition::DontExit,
+                close_when_requested: false,
+                ..default()
+            }));
+        } else {
+            app.add_plugins(DefaultPlugins);
+        }
+
         app.add_plugins(ImageExportPlugin::default());
         app.insert_resource(MyPlayerName(self.name.clone(), false));
+        app.insert_resource(Seed(self.seed));
+        app.insert_resource(LowGpu(self.low_gpu));
         app.add_systems(
             Update,
             (attach_name, sync_finished_grpc, sync_velocities_grpc),

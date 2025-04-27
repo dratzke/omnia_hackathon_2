@@ -63,10 +63,21 @@ run-both: build
 run-both-one: build
     # Start server in background, save PID, wait 5s, run client, then kill server
     cp -r assets ./target/release/
-    ./target/release/server --auth-port 4000 --game-port 5000 --players 1 --max-game-seconds 20 & 
+    ./target/release/server --auth-port 4000 --game-port 5000 --players 1 --max-game-seconds 20 --seed 143532 & 
     echo $$ > server.pid 
     sleep 2 
-    ./target/release/client --auth-port 4000 --server 127.0.0.1 --client-port 5002 --name B
+    ./target/release/client --auth-port 4000 --server 127.0.0.1 --client-port 5002 --name B --seed 143532 
+    pkill -F server.pid
+    rm server.pid
+
+
+run-both-one-low: build
+    # Start server in background, save PID, wait 5s, run client, then kill server
+    cp -r assets ./target/release/
+    ./target/release/server --auth-port 4000 --game-port 5000 --players 1 --max-game-seconds 20 --seed 143532 --headless & 
+    echo $$ > server.pid 
+    sleep 2 
+    ./target/release/client --auth-port 4000 --server 127.0.0.1 --client-port 5002 --name B --seed 143532 --low-gpu
     pkill -F server.pid
     rm server.pid
 

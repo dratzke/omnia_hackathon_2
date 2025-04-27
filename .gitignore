@@ -7,4 +7,7 @@ bot/output_images
 bot/pylsp.log
 bot/proto/__pycache__
 bot/raw_screens
+bot/raw_screens_*
+bot/output_images_*
+bot/marble_client_records_*.csv
 ./teams

@@ -40,6 +40,12 @@ pub struct GravityModifier {
 #[derive(Resource)]
 struct Physics(bool);
 
+#[derive(Resource)]
+pub struct Seed(pub u32);
+
+#[derive(Resource)]
+pub struct LowGpu(pub bool);
+
 #[derive(Component)]
 struct GoalLine;
 
@@ -59,6 +65,8 @@ fn spawn_world(
     mut materials: ResMut<Assets<StandardMaterial>>,
     physics: Res<Physics>,
     asset_server: Res<AssetServer>,
+    seed: Res<Seed>,
+    low_gpu: Res<LowGpu>,
 ) {
     commands.spawn((
         DirectionalLight {
@@ -72,7 +80,7 @@ fn spawn_world(
             ..default()
         },
     ));
-    let track = Track::generate(1234, 30.0);
+    let track = Track::generate(seed.0, 30.0);
     // let track = Track::debug_straight();
     for (i, segment) in track.segments.iter().enumerate() {
         let m = generate_mesh_for_block(segment.block_type.clone());
@@ -81,7 +89,7 @@ fn spawn_world(
                 .unwrap();
         let mut e = commands.spawn((
             Mesh3d(meshes.add(m)),
-            MeshMaterial3d(materials.add(material_for_segment(&segment, &asset_server))),
+            MeshMaterial3d(materials.add(material_for_segment(&segment, &asset_server, low_gpu.0))),
             Transform::IDENTITY
                 .with_translation(segment.transform.position)
                 .with_rotation(segment.transform.rotation),
@@ -179,36 +187,55 @@ fn spawn_gravity_booster_marker(
     }
 }
 
-fn material_for_segment(segment: &TrackSegment, asset_server: &AssetServer) -> StandardMaterial {
+fn material_for_segment(
+    segment: &TrackSegment,
+    asset_server: &AssetServer,
+    low_gpu: bool,
+) -> StandardMaterial {
     // This assumes you have access to an asset_server in your system
     // You might need to get this from a parameter, resource, or closure
 
-    match segment.road_type {
-        RoadType::Asphalt => StandardMaterial {
-            // Load textures from the concrete directory
-            base_color_texture: Some(asset_server.load("concrete/color.png")),
-            normal_map_texture: Some(asset_server.load("concrete/normal.png")),
-            metallic_roughness_texture: Some(asset_server.load("concrete/roughness.png")),
-            // Material properties appropriate for concrete/asphalt
-            perceptual_roughness: 0.9, // Concrete is rough
-            metallic: 0.0,             // Not metallic
-            reflectance: 0.05,         // Low reflectance
-            ..default()
-        },
-        RoadType::Ice => StandardMaterial {
-            // Load textures from the ice directory
-            base_color_texture: Some(asset_server.load("ice/color.png")),
-            normal_map_texture: Some(asset_server.load("ice/normal.png")),
-            metallic_roughness_texture: Some(asset_server.load("ice/roughness.png")),
-            // Material properties appropriate for ice
-            perceptual_roughness: 0.1,  // Ice is smooth
-            metallic: 0.0,              // Not metallic
-            reflectance: 0.5,           // Higher reflectance
-            ior: 1.31,                  // Index of refraction for ice[4][5]
-            specular_transmission: 0.6, // Ice is somewhat transparent
-            thickness: 0.5,             // Required for transmission effects
-            ..default()
-        },
+    if low_gpu {
+        match segment.road_type {
+            RoadType::Asphalt => StandardMaterial {
+                // Load textures from the concrete directory
+                base_color_texture: Some(asset_server.load("concrete/color.png")),
+                ..default()
+            },
+            RoadType::Ice => StandardMaterial {
+                // Load textures from the ice directory
+                base_color_texture: Some(asset_server.load("ice/color.png")),
+                ..default()
+            },
+        }
+    } else {
+        match segment.road_type {
+            RoadType::Asphalt => StandardMaterial {
+                // Load textures from the concrete directory
+                base_color_texture: Some(asset_server.load("concrete/color.png")),
+                normal_map_texture: Some(asset_server.load("concrete/normal.png")),
+                metallic_roughness_texture: Some(asset_server.load("concrete/roughness.png")),
+                // Material properties appropriate for concrete/asphalt
+                perceptual_roughness: 0.9, // Concrete is rough
+                metallic: 0.0,             // Not metallic
+                reflectance: 0.05,         // Low reflectance
+                ..default()
+            },
+            RoadType::Ice => StandardMaterial {
+                // Load textures from the ice directory
+                base_color_texture: Some(asset_server.load("ice/color.png")),
+                normal_map_texture: Some(asset_server.load("ice/normal.png")),
+                metallic_roughness_texture: Some(asset_server.load("ice/roughness.png")),
+                // Material properties appropriate for ice
+                perceptual_roughness: 0.1,  // Ice is smooth
+                metallic: 0.0,              // Not metallic
+                reflectance: 0.5,           // Higher reflectance
+                ior: 1.31,                  // Index of refraction for ice[4][5]
+                specular_transmission: 0.6, // Ice is somewhat transparent
+                thickness: 0.5,             // Required for transmission effects
+                ..default()
+            },
+        }
     }
 }
 

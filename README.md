@@ -65,7 +65,7 @@ This is the component you will build during the hackathon. The releases contain 
 ## Getting Started
 
 ### Prerequisites
-Download the [release](https://github.com/julianbieber/hackathon_2/releases) and extract the zip file.
+Download the [release](https://github.com/julianbieber/hackathon_2/tags) and extract the zip file.
 The zip contains the server and client binaries for linux and windows + the assets used for the ui and an example bot.
 You need [uv](https://docs.astral.sh/uv/getting-started/installation/) to run the example bot.
 

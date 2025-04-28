@@ -133,6 +133,7 @@ The function `MarbleClient.decision` is currently responsible for deciding which
 
 (Please note at the moment it is still work in progress) 
 ```bash
+cd bot
 uv run python main.py
 ```
 

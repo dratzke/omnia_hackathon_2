@@ -49,10 +49,12 @@ def run_client(args: (int, int)) -> Optional[subprocess.Popen]:
     client = util.start_client_process(4000, '127.0.0.1', 5001 + client_id, name, 50051 + client_id, seed, False)
 
     bot = marble_client.MarbleClient('localhost', str(50051 + client_id), 'raw_screens_' + str(client_id), name)
-    bot.run_interaction_loop()
-    df = bot.get_records_as_dataframe()
-    df.to_parquet(f'marble_client_records_{client_id}.csv', index=False)
-    util.save_images_from_dataframe(df, f'output_images_{client_id}')
+    try:
+        bot.run_interaction_loop()
+    finally:
+        df = bot.get_records_as_dataframe()
+        df.to_parquet(f'marble_client_records_{client_id}.parquet', index=False)
+        util.save_images_from_dataframe(df, f'output_images_{client_id}')
 
     if client:
         client.kill()

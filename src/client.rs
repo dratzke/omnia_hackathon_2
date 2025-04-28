@@ -14,10 +14,11 @@ use lightyear::{
     prelude::client::{Predicted, Replicate},
     shared::replication::components::Controlled,
 };
-use std::{net::SocketAddr, sync::Arc, u32};
+use std::{net::SocketAddr, sync::Arc, thread, time, u32};
 
 use bevy::{
     asset::RenderAssetUsages,
+    log::LogPlugin,
     prelude::*,
     render::{
         Render, RenderApp, RenderSet,
@@ -26,6 +27,7 @@ use bevy::{
         renderer::RenderDevice,
     },
     tasks::futures_lite,
+    window::WindowResolution,
 };
 use clap::Parser;
 use client::{Authentication, ClientCommands, ClientPlugins, IoConfig, NetConfig};
@@ -63,6 +65,10 @@ struct ClientArgs {
     /// Disables the physically based rendering materials to lower the gpu resource consumption. (This also disables the transparency of the ice road)
     #[clap(long)]
     low_gpu: bool,
+
+    /// Verbose logging
+    #[clap(long)]
+    verbose: bool,
 }
 
 pub fn main() {
@@ -105,6 +111,7 @@ pub fn main() {
         results,
         seed: args.seed,
         low_gpu: args.low_gpu,
+        verbose: args.verbose,
     });
     app.run();
     // server_thread.join().unwrap();
@@ -127,6 +134,8 @@ struct MyClientPlugin {
     name: String,
     seed: u32,
     low_gpu: bool,
+
+    verbose: bool,
 }
 
 #[derive(Resource)]
@@ -143,14 +152,42 @@ struct ControlViaGrpc {
 impl Plugin for MyClientPlugin {
     fn build(&self, app: &mut App) {
         if self.grpc {
+            if self.verbose {
+                app.add_plugins(
+                    DefaultPlugins
+                        .set(WindowPlugin {
+                            primary_window: None,
+                            exit_condition: bevy::window::ExitCondition::DontExit,
+                            close_when_requested: false,
+                            ..default()
+                        })
+                        .set(LogPlugin {
+                            // Uncomment this to override the default log settings:
+                            level: bevy::log::Level::DEBUG,
+                            // filter: "wgpu=warn,bevy_ecs=info".to_string(),
+                            ..default()
+                        }),
+                );
+            } else {
+                app.add_plugins(DefaultPlugins.set(WindowPlugin {
+                    primary_window: Some(Window {
+                        resolution: WindowResolution::new(1280.0, 720.0),
+                        title: "client".into(),
+                        ..default() // [1][5]
+                    }),
+                    ..default()
+                }));
+                app.add_systems(Update, frame_limiter_system);
+            }
+        } else {
             app.add_plugins(DefaultPlugins.set(WindowPlugin {
-                primary_window: None,
-                exit_condition: bevy::window::ExitCondition::DontExit,
-                close_when_requested: false,
+                primary_window: Some(Window {
+                    resolution: WindowResolution::new(1280.0, 720.0),
+                    title: "client".into(),
+                    ..default() // [1][5]
+                }),
                 ..default()
             }));
-        } else {
-            app.add_plugins(DefaultPlugins);
         }
 
         app.add_plugins(ImageExportPlugin::default());
@@ -406,4 +443,8 @@ fn attach_name(mut my_name: ResMut<MyPlayerName>, mut commands: Commands) {
         ));
         my_name.1 = true;
     }
+}
+
+fn frame_limiter_system() {
+    thread::sleep(time::Duration::from_millis(10)); // Example fixed sleep[1]
 }

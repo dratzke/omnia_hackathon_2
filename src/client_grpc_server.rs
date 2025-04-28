@@ -74,6 +74,7 @@ pub fn start_gprc_server(
                 .serve(addr)
                 .await
                 .unwrap();
+            println!("grpc server terminated");
         });
     })
 }

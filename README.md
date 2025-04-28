@@ -99,7 +99,7 @@ e/c => move the camera up/down, regardless of the camera direction
 You will need to first start the server and then the client.
 Both executables (server/client on linux and server.exe/client.exe) have some command line parameters but for a simple one player game of up to 2 minutes you can simply run the executables without arguments to start them.
 
-### GRPC / agent control
+### gRPC / agent control
 There are two methods you use when controlling the client with an agent: `GetState` and `Input`.
 The fields of the `InputRequest` correspond 1-1 to the buttons you can press when playing the game.
 ```
@@ -116,6 +116,7 @@ The ordering inside of the byte array is width first, so the first 1280 RGBA tup
 
 Additionally `GetState` provides the current linear and angular velocities your marble experiences.
 Those vectors are in the global coordinate system. You can transform them to a local system by utilizing the fact, that forward is defined by the current direction of travel (the linear velocity).
+Furthermore, there is a relative angular velocity, there a rotation around the X axis means forward.
 
 Lastly `GetState` tells you if the game has finished and which player finished in which position. The results are orderd by the player rankings within the match that just concluded.
 
@@ -133,6 +134,7 @@ The function `MarbleClient.decision` is currently responsible for deciding which
 
 (Please note at the moment it is still work in progress) 
 ```bash
+cd bot
 uv run python main.py
 ```
 
@@ -174,5 +176,13 @@ Options:
       --low-gpu                    Disables the physically based rendering materials to lower the gpu resource consumption. (This also disables the transparency of the ice road)
   -h, --help                       Print help
 ```
+
+
+### Tournament
+
+For the tournament at the end of the hackathon, each team will run their client + agent on their own machine and connect to the server over the network.
+So please prepare to pass the required cli arguments (seed and server) to the client and run it independently of a local server.
+
+Each race in the tournament will last 3 minutes and we race on 3 unknown tracks.
 
 

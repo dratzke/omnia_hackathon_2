@@ -8,6 +8,7 @@ message StateResponse{
   bytes screen = 1;
   Vec3 linear_velocity = 2;
   Vec3 angular_velocity = 3;
+  Vec3 relative_angular_velocity = 6;
   bool finished = 4;
   repeated ResultEntry results = 5;
 }

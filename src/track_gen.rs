@@ -248,10 +248,13 @@ impl Track {
             }
             _ => BlockType::Slope {
                 length: 15.0,
-                height_change: -((self.noise.get([
-                    self.current_end.position.y as f64 * 0.3,
-                    self.current_end.position.x as f64 * 0.3,
-                ]) as f32)
+                height_change: -((self
+                    .noise
+                    .get([
+                        self.current_end.position.y as f64 * 0.3,
+                        self.current_end.position.x as f64 * 0.3,
+                    ])
+                    .abs() as f32)
                     * 10.0
                     + 10.0),
             },

@@ -18,7 +18,7 @@ use bevy::{
     core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
     prelude::*,
     tasks::IoTaskPool,
-    window::CursorGrabMode,
+    window::{CursorGrabMode, WindowResolution},
 };
 use bevy_rapier3d::prelude::*;
 use clap::Parser;
@@ -124,7 +124,14 @@ impl Plugin for ServerPlugin {
                 ..default()
             }));
         } else {
-            app.add_plugins(DefaultPlugins);
+            app.add_plugins(DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    resolution: WindowResolution::new(1280.0, 720.0),
+                    title: "server".into(),
+                    ..default() // [1][5]
+                }),
+                ..default()
+            }));
         }
 
         app.add_plugins(build_server_plugin(

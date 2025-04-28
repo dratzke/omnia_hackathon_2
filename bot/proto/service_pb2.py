@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13proto/service.proto\x12\x06marble\"\x11\n\x0fGetStateRequest\"\xa6\x01\n\rStateResponse\x12\x0e\n\x06screen\x18\x01 \x01(\x0c\x12%\n\x0flinear_velocity\x18\x02 \x01(\x0b\x32\x0c.marble.Vec3\x12&\n\x10\x61ngular_velocity\x18\x03 \x01(\x0b\x32\x0c.marble.Vec3\x12\x10\n\x08\x66inished\x18\x04 \x01(\x08\x12$\n\x07results\x18\x05 \x03(\x0b\x32\x13.marble.ResultEntry\"\xc1\x01\n\x0bResultEntry\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x0b\x66inish_time\x18\x02 \x01(\x02H\x00\x88\x01\x01\x12!\n\x14last_touched_road_id\x18\x03 \x01(\x04H\x01\x88\x01\x01\x12#\n\x16last_touched_road_time\x18\x04 \x01(\x02H\x02\x88\x01\x01\x42\x0e\n\x0c_finish_timeB\x17\n\x15_last_touched_road_idB\x19\n\x17_last_touched_road_time\"\'\n\x04Vec3\x12\t\n\x01x\x18\x01 \x01(\x02\x12\t\n\x01y\x18\x02 \x01(\x02\x12\t\n\x01z\x18\x03 \x01(\x02\"Y\n\x0cInputRequest\x12\x0f\n\x07\x66orward\x18\x01 \x01(\x08\x12\x0c\n\x04\x62\x61\x63k\x18\x02 \x01(\x08\x12\x0c\n\x04left\x18\x03 \x01(\x08\x12\r\n\x05right\x18\x04 \x01(\x08\x12\r\n\x05reset\x18\x05 \x01(\x08\"\x0f\n\rEmptyResponse2\x81\x01\n\rMarbleService\x12:\n\x08GetState\x12\x17.marble.GetStateRequest\x1a\x15.marble.StateResponse\x12\x34\n\x05Input\x12\x14.marble.InputRequest\x1a\x15.marble.EmptyResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13proto/service.proto\x12\x06marble\"\x11\n\x0fGetStateRequest\"\xd7\x01\n\rStateResponse\x12\x0e\n\x06screen\x18\x01 \x01(\x0c\x12%\n\x0flinear_velocity\x18\x02 \x01(\x0b\x32\x0c.marble.Vec3\x12&\n\x10\x61ngular_velocity\x18\x03 \x01(\x0b\x32\x0c.marble.Vec3\x12/\n\x19relative_angular_velocity\x18\x06 \x01(\x0b\x32\x0c.marble.Vec3\x12\x10\n\x08\x66inished\x18\x04 \x01(\x08\x12$\n\x07results\x18\x05 \x03(\x0b\x32\x13.marble.ResultEntry\"\xc1\x01\n\x0bResultEntry\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x18\n\x0b\x66inish_time\x18\x02 \x01(\x02H\x00\x88\x01\x01\x12!\n\x14last_touched_road_id\x18\x03 \x01(\x04H\x01\x88\x01\x01\x12#\n\x16last_touched_road_time\x18\x04 \x01(\x02H\x02\x88\x01\x01\x42\x0e\n\x0c_finish_timeB\x17\n\x15_last_touched_road_idB\x19\n\x17_last_touched_road_time\"\'\n\x04Vec3\x12\t\n\x01x\x18\x01 \x01(\x02\x12\t\n\x01y\x18\x02 \x01(\x02\x12\t\n\x01z\x18\x03 \x01(\x02\"Y\n\x0cInputRequest\x12\x0f\n\x07\x66orward\x18\x01 \x01(\x08\x12\x0c\n\x04\x62\x61\x63k\x18\x02 \x01(\x08\x12\x0c\n\x04left\x18\x03 \x01(\x08\x12\r\n\x05right\x18\x04 \x01(\x08\x12\r\n\x05reset\x18\x05 \x01(\x08\"\x0f\n\rEmptyResponse2\x81\x01\n\rMarbleService\x12:\n\x08GetState\x12\x17.marble.GetStateRequest\x1a\x15.marble.StateResponse\x12\x34\n\x05Input\x12\x14.marble.InputRequest\x1a\x15.marble.EmptyResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,15 +34,15 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETSTATEREQUEST']._serialized_start=31
   _globals['_GETSTATEREQUEST']._serialized_end=48
   _globals['_STATERESPONSE']._serialized_start=51
-  _globals['_STATERESPONSE']._serialized_end=217
-  _globals['_RESULTENTRY']._serialized_start=220
-  _globals['_RESULTENTRY']._serialized_end=413
-  _globals['_VEC3']._serialized_start=415
-  _globals['_VEC3']._serialized_end=454
-  _globals['_INPUTREQUEST']._serialized_start=456
-  _globals['_INPUTREQUEST']._serialized_end=545
-  _globals['_EMPTYRESPONSE']._serialized_start=547
-  _globals['_EMPTYRESPONSE']._serialized_end=562
-  _globals['_MARBLESERVICE']._serialized_start=565
-  _globals['_MARBLESERVICE']._serialized_end=694
+  _globals['_STATERESPONSE']._serialized_end=266
+  _globals['_RESULTENTRY']._serialized_start=269
+  _globals['_RESULTENTRY']._serialized_end=462
+  _globals['_VEC3']._serialized_start=464
+  _globals['_VEC3']._serialized_end=503
+  _globals['_INPUTREQUEST']._serialized_start=505
+  _globals['_INPUTREQUEST']._serialized_end=594
+  _globals['_EMPTYRESPONSE']._serialized_start=596
+  _globals['_EMPTYRESPONSE']._serialized_end=611
+  _globals['_MARBLESERVICE']._serialized_start=614
+  _globals['_MARBLESERVICE']._serialized_end=743
 # @@protoc_insertion_point(module_scope)

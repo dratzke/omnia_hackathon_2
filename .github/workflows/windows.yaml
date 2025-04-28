@@ -150,7 +150,7 @@ jobs:
       with:
         tag: ${{ env.VERSION }}
         name: "Release ${{ env.VERSION }}"
-        artifacts: "release-${{ env.VERSION }}.zip"
+        artifacts: "release-${{ steps.commit_hash.outputs.hash }}.zip"
         replacesArtifacts: true
         allowUpdates: true
         token: ${{ secrets.GITHUB_TOKEN }}

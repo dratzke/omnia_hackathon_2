@@ -18,6 +18,7 @@ use std::{net::SocketAddr, sync::Arc, u32};
 
 use bevy::{
     asset::RenderAssetUsages,
+    log::LogPlugin,
     prelude::*,
     render::{
         Render, RenderApp, RenderSet,
@@ -64,6 +65,10 @@ struct ClientArgs {
     /// Disables the physically based rendering materials to lower the gpu resource consumption. (This also disables the transparency of the ice road)
     #[clap(long)]
     low_gpu: bool,
+
+    /// Verbose logging
+    #[clap(long)]
+    verbose: bool,
 }
 
 pub fn main() {
@@ -106,6 +111,7 @@ pub fn main() {
         results,
         seed: args.seed,
         low_gpu: args.low_gpu,
+        verbose: args.verbose,
     });
     app.run();
     // server_thread.join().unwrap();
@@ -128,6 +134,8 @@ struct MyClientPlugin {
     name: String,
     seed: u32,
     low_gpu: bool,
+
+    verbose: bool,
 }
 
 #[derive(Resource)]
@@ -144,12 +152,30 @@ struct ControlViaGrpc {
 impl Plugin for MyClientPlugin {
     fn build(&self, app: &mut App) {
         if self.grpc {
-            app.add_plugins(DefaultPlugins.set(WindowPlugin {
-                primary_window: None,
-                exit_condition: bevy::window::ExitCondition::DontExit,
-                close_when_requested: false,
-                ..default()
-            }));
+            if self.verbose {
+                app.add_plugins(
+                    DefaultPlugins
+                        .set(WindowPlugin {
+                            primary_window: None,
+                            exit_condition: bevy::window::ExitCondition::DontExit,
+                            close_when_requested: false,
+                            ..default()
+                        })
+                        .set(LogPlugin {
+                            // Uncomment this to override the default log settings:
+                            level: bevy::log::Level::TRACE,
+                            // filter: "wgpu=warn,bevy_ecs=info".to_string(),
+                            ..default()
+                        }),
+                );
+            } else {
+                app.add_plugins(DefaultPlugins.set(WindowPlugin {
+                    primary_window: None,
+                    exit_condition: bevy::window::ExitCondition::DontExit,
+                    close_when_requested: false,
+                    ..default()
+                }));
+            }
         } else {
             app.add_plugins(DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {

@@ -170,9 +170,11 @@ impl Plugin for MyClientPlugin {
                 );
             } else {
                 app.add_plugins(DefaultPlugins.set(WindowPlugin {
-                    primary_window: None,
-                    exit_condition: bevy::window::ExitCondition::DontExit,
-                    close_when_requested: false,
+                    primary_window: Some(Window {
+                        resolution: WindowResolution::new(1280.0, 720.0),
+                        title: "client".into(),
+                        ..default() // [1][5]
+                    }),
                     ..default()
                 }));
                 app.add_systems(Update, frame_limiter_system);

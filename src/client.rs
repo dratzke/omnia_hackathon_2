@@ -26,6 +26,7 @@ use bevy::{
         renderer::RenderDevice,
     },
     tasks::futures_lite,
+    window::WindowResolution,
 };
 use clap::Parser;
 use client::{Authentication, ClientCommands, ClientPlugins, IoConfig, NetConfig};
@@ -150,7 +151,14 @@ impl Plugin for MyClientPlugin {
                 ..default()
             }));
         } else {
-            app.add_plugins(DefaultPlugins);
+            app.add_plugins(DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    resolution: WindowResolution::new(1280.0, 720.0),
+                    title: "client".into(),
+                    ..default() // [1][5]
+                }),
+                ..default()
+            }));
         }
 
         app.add_plugins(ImageExportPlugin::default());

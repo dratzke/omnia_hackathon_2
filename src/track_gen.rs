@@ -26,6 +26,10 @@ pub enum BlockType {
         length: f32,
         height_change: f32,
     },
+    Bumpy {
+        length: f32,
+        pertubation: f32,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +55,7 @@ pub struct TrackSegment {
 pub struct Track {
     pub segments: Vec<TrackSegment>,
     pub current_end: BlockTransform,
-    noise: Perlin,
+    pub noise: Perlin,
     turn_since_down: f32,
 }
 
@@ -70,6 +74,14 @@ impl Track {
             BlockType::Slope {
                 length: 10.0,
                 height_change: -10.0,
+            },
+            RoadType::Asphalt,
+            BallModifier::None,
+        );
+        track.append_block(
+            BlockType::Bumpy {
+                length: 10.0,
+                pertubation: 2.0,
             },
             RoadType::Asphalt,
             BallModifier::None,
@@ -204,8 +216,8 @@ impl Track {
         let noise_value = self.noise.get([self.segments.len() as f64 * 0.3, 0.0]);
 
         match (noise_value).abs() {
-            v if v < 0.2 => BlockType::Straight { length: 10.0 },
-            v if v < 0.4 => {
+            v if v < 0.15 => BlockType::Straight { length: 10.0 },
+            v if v < 0.3 => {
                 let r = (self.noise.get([
                     self.current_end.position.x as f64 * 0.3,
                     self.current_end.position.y as f64 * 0.3,
@@ -217,7 +229,11 @@ impl Track {
                     radius: self.turn_radius(),
                 }
             }
-            v if v < 0.6 => {
+            v if v < 0.55 => BlockType::Bumpy {
+                length: 15.0,
+                pertubation: 0.4,
+            },
+            v if v < 0.7 => {
                 let r = (self.noise.get([
                     self.current_end.position.x as f64 * 0.3,
                     self.current_end.position.y as f64 * 0.3,
@@ -313,6 +329,10 @@ impl Track {
 
                 BlockTransform { position, rotation }
             }
+            BlockType::Bumpy { length, .. } => BlockTransform {
+                position: self.current_end.position + self.current_end.rotation * Vec3::Z * *length,
+                rotation: self.current_end.rotation,
+            },
         }
     }
 }

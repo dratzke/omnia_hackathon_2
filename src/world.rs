@@ -83,7 +83,11 @@ fn spawn_world(
     let track = Track::generate(seed.0, 30.0);
     // let track = Track::debug_straight();
     for (i, segment) in track.segments.iter().enumerate() {
-        let m = generate_mesh_for_block(segment.block_type.clone());
+        let m = generate_mesh_for_block(
+            segment.block_type.clone(),
+            &track.noise,
+            segment.transform.position,
+        );
         let collider =
             Collider::from_bevy_mesh(&m, &ComputedColliderShape::TriMesh(TriMeshFlags::all()))
                 .unwrap();

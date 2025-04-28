@@ -14,7 +14,7 @@ use lightyear::{
     prelude::client::{Predicted, Replicate},
     shared::replication::components::Controlled,
 };
-use std::{net::SocketAddr, sync::Arc, u32};
+use std::{net::SocketAddr, sync::Arc, thread, time, u32};
 
 use bevy::{
     asset::RenderAssetUsages,
@@ -163,7 +163,7 @@ impl Plugin for MyClientPlugin {
                         })
                         .set(LogPlugin {
                             // Uncomment this to override the default log settings:
-                            level: bevy::log::Level::TRACE,
+                            level: bevy::log::Level::DEBUG,
                             // filter: "wgpu=warn,bevy_ecs=info".to_string(),
                             ..default()
                         }),
@@ -175,6 +175,7 @@ impl Plugin for MyClientPlugin {
                     close_when_requested: false,
                     ..default()
                 }));
+                app.add_systems(Update, frame_limiter_system);
             }
         } else {
             app.add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -440,4 +441,8 @@ fn attach_name(mut my_name: ResMut<MyPlayerName>, mut commands: Commands) {
         ));
         my_name.1 = true;
     }
+}
+
+fn frame_limiter_system() {
+    thread::sleep(time::Duration::from_millis(10)); // Example fixed sleep[1]
 }

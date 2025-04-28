@@ -10,18 +10,20 @@ class GetStateRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class StateResponse(_message.Message):
-    __slots__ = ("screen", "linear_velocity", "angular_velocity", "finished", "results")
+    __slots__ = ("screen", "linear_velocity", "angular_velocity", "relative_angular_velocity", "finished", "results")
     SCREEN_FIELD_NUMBER: _ClassVar[int]
     LINEAR_VELOCITY_FIELD_NUMBER: _ClassVar[int]
     ANGULAR_VELOCITY_FIELD_NUMBER: _ClassVar[int]
+    RELATIVE_ANGULAR_VELOCITY_FIELD_NUMBER: _ClassVar[int]
     FINISHED_FIELD_NUMBER: _ClassVar[int]
     RESULTS_FIELD_NUMBER: _ClassVar[int]
     screen: bytes
     linear_velocity: Vec3
     angular_velocity: Vec3
+    relative_angular_velocity: Vec3
     finished: bool
     results: _containers.RepeatedCompositeFieldContainer[ResultEntry]
-    def __init__(self, screen: _Optional[bytes] = ..., linear_velocity: _Optional[_Union[Vec3, _Mapping]] = ..., angular_velocity: _Optional[_Union[Vec3, _Mapping]] = ..., finished: bool = ..., results: _Optional[_Iterable[_Union[ResultEntry, _Mapping]]] = ...) -> None: ...
+    def __init__(self, screen: _Optional[bytes] = ..., linear_velocity: _Optional[_Union[Vec3, _Mapping]] = ..., angular_velocity: _Optional[_Union[Vec3, _Mapping]] = ..., relative_angular_velocity: _Optional[_Union[Vec3, _Mapping]] = ..., finished: bool = ..., results: _Optional[_Iterable[_Union[ResultEntry, _Mapping]]] = ...) -> None: ...
 
 class ResultEntry(_message.Message):
     __slots__ = ("name", "finish_time", "last_touched_road_id", "last_touched_road_time")

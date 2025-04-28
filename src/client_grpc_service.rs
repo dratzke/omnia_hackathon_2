@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use bevy::math::Quat;
 use tokio::sync::Mutex;
 use tonic::{Response, Status};
 
@@ -41,10 +42,19 @@ impl GRPCService {
             }
         };
         let results = { self.results.lock().await.clone() };
+        let relative = angular_velocity_relative_to_movement(
+            bevy::math::Vec3::new(ang.x, ang.y, ang.z),
+            bevy::math::Vec3::new(lin.x, lin.y, lin.z),
+        );
         Ok(Response::new(StateResponse {
             screen: screen_copy,
             linear_velocity: Some(lin),
             angular_velocity: Some(ang),
+            relative_angular_velocity: Some(Vec3 {
+                x: relative.x,
+                y: relative.y,
+                z: relative.z,
+            }),
             finished,
             results,
         }))
@@ -68,4 +78,19 @@ impl GRPCService {
 
         Ok(Response::new(EmptyResponse {}))
     }
+}
+
+fn angular_velocity_relative_to_movement(
+    angular_velocity: bevy::math::Vec3,
+    linear_velocity: bevy::math::Vec3,
+) -> bevy::math::Vec3 {
+    let Some(forward) = linear_velocity.try_normalize() else {
+        return bevy::math::Vec3::ZERO;
+    };
+
+    let align_rotation = Quat::from_rotation_arc(bevy::math::Vec3::X, forward);
+
+    let inverse_align_rotation = align_rotation.inverse();
+
+    inverse_align_rotation * angular_velocity
 }

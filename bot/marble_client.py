@@ -143,6 +143,7 @@ class MarbleClient:
                 'screen': screen_file,
                 'linear_velocity': current_state.linear_velocity,
                 'angular_velocity': current_state.angular_velocity,
+                'relative_angular_velocity': current_state.relative_angular_velocity,
                 'finished': current_state.finished,
                 'results': current_state.results,
             }

@@ -7,10 +7,14 @@ use bevy::{
 // Define a plugin to encapsulate camera controller logic
 pub struct CameraControllerPlugin;
 
+#[derive(Resource)]
+struct CursorLock(bool);
+
 impl Plugin for CameraControllerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MovementSettings>()
             .init_resource::<MouseSensitivity>()
+            .insert_resource(CursorLock(true))
             .add_systems(
                 Update,
                 (
@@ -18,7 +22,8 @@ impl Plugin for CameraControllerPlugin {
                     camera_rotation_system,
                     cursor_grab_system, // Add system to toggle cursor grab
                 ),
-            );
+            )
+            .add_systems(Update, cursor_center);
     }
 }
 
@@ -133,18 +138,32 @@ fn camera_rotation_system(
 }
 
 // System to toggle cursor grab mode with the Escape key
-fn cursor_grab_system(mut windows: Query<&mut Window>, keys: Res<ButtonInput<KeyCode>>) {
+fn cursor_grab_system(
+    mut windows: Query<&mut Window>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut cursor_lock: ResMut<CursorLock>,
+) {
     if keys.just_pressed(KeyCode::Escape) {
         let mut window = windows.single_mut();
         match window.cursor_options.grab_mode {
             CursorGrabMode::None => {
                 window.cursor_options.grab_mode = CursorGrabMode::Locked;
                 window.cursor_options.visible = false;
+                cursor_lock.0 = false;
             }
             _ => {
                 window.cursor_options.grab_mode = CursorGrabMode::None;
                 window.cursor_options.visible = true;
+                cursor_lock.0 = true;
             }
+        }
+    }
+}
+
+fn cursor_center(cursor_lock: Res<CursorLock>, mut windows: Query<&mut Window>) {
+    if cursor_lock.0 {
+        for mut w in windows.iter_mut() {
+            w.set_cursor_position(Some(Vec2::new(100.0, 100.0)));
         }
     }
 }

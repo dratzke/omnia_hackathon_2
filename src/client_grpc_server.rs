@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::thread::JoinHandle;
+use std::time::Instant;
 
 use bevy::math::Vec3;
 use tokio::sync::Mutex;
@@ -42,6 +43,7 @@ pub fn start_gprc_server(
     linear_velocity: Arc<Mutex<Vec3>>,
     angular_velocity: Arc<Mutex<Vec3>>,
     results: Arc<Mutex<Vec<ResultEntry>>>,
+    last_used: Arc<Mutex<Instant>>,
     grpc_port: u16,
 ) -> JoinHandle<()> {
     std::thread::spawn(move || {
@@ -58,6 +60,7 @@ pub fn start_gprc_server(
                 linear_velocity,
                 angular_velocity,
                 results,
+                last_used,
             },
         };
         let reflection = tonic_reflection::server::Builder::configure()

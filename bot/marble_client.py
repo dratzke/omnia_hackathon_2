@@ -103,7 +103,7 @@ class MarbleClient:
         right = False
         reset = False
 
-        # time.sleep(0.2)
+        time.sleep(0.2)
 
         return service_pb2.InputRequest(
             forward=forward,

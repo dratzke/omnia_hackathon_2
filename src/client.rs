@@ -14,11 +14,15 @@ use lightyear::{
     prelude::client::{Predicted, Replicate},
     shared::replication::components::Controlled,
 };
-use std::{net::SocketAddr, sync::Arc, thread, time, u32};
+use std::{
+    net::SocketAddr,
+    sync::Arc,
+    time::{Duration, Instant},
+    u32,
+};
 
 use bevy::{
     asset::RenderAssetUsages,
-    log::LogPlugin,
     prelude::*,
     render::{
         Render, RenderApp, RenderSet,
@@ -65,10 +69,6 @@ struct ClientArgs {
     /// Disables the physically based rendering materials to lower the gpu resource consumption. (This also disables the transparency of the ice road)
     #[clap(long)]
     low_gpu: bool,
-
-    /// Verbose logging
-    #[clap(long)]
-    verbose: bool,
 }
 
 pub fn main() {
@@ -82,6 +82,7 @@ pub fn main() {
     let linear_velocity = Arc::new(Mutex::new(Vec3::ZERO));
     let angular_velocity = Arc::new(Mutex::new(Vec3::ZERO));
     let results = Arc::new(Mutex::new(Vec::new()));
+    let last_used = Arc::new(Mutex::new(Instant::now()));
 
     let _ = if let Some(grpc_port) = args.grpc_port {
         start_gprc_server(
@@ -91,6 +92,7 @@ pub fn main() {
             linear_velocity.clone(),
             angular_velocity.clone(),
             results.clone(),
+            last_used.clone(),
             grpc_port,
         )
     } else {
@@ -111,7 +113,7 @@ pub fn main() {
         results,
         seed: args.seed,
         low_gpu: args.low_gpu,
-        verbose: args.verbose,
+        last_used,
     });
     app.run();
     // server_thread.join().unwrap();
@@ -130,12 +132,11 @@ struct MyClientPlugin {
     linear_velocity: Arc<Mutex<bevy::math::Vec3>>,
     angular_velocity: Arc<Mutex<bevy::math::Vec3>>,
     results: Arc<Mutex<Vec<ResultEntry>>>,
+    last_used: Arc<Mutex<Instant>>,
 
     name: String,
     seed: u32,
     low_gpu: bool,
-
-    verbose: bool,
 }
 
 #[derive(Resource)]
@@ -146,39 +147,22 @@ struct ControlViaGrpc {
     linear_velocity: Arc<Mutex<bevy::math::Vec3>>,
     angular_velocity: Arc<Mutex<bevy::math::Vec3>>,
     results: Arc<Mutex<Vec<ResultEntry>>>,
+    last: Arc<Mutex<Instant>>,
     enabled: bool,
 }
 
 impl Plugin for MyClientPlugin {
     fn build(&self, app: &mut App) {
         if self.grpc {
-            if self.verbose {
-                app.add_plugins(
-                    DefaultPlugins
-                        .set(WindowPlugin {
-                            primary_window: None,
-                            exit_condition: bevy::window::ExitCondition::DontExit,
-                            close_when_requested: false,
-                            ..default()
-                        })
-                        .set(LogPlugin {
-                            // Uncomment this to override the default log settings:
-                            level: bevy::log::Level::DEBUG,
-                            // filter: "wgpu=warn,bevy_ecs=info".to_string(),
-                            ..default()
-                        }),
-                );
-            } else {
-                app.add_plugins(DefaultPlugins.set(WindowPlugin {
-                    primary_window: Some(Window {
-                        resolution: WindowResolution::new(1280.0, 720.0),
-                        title: "client".into(),
-                        ..default() // [1][5]
-                    }),
+            app.add_plugins(DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    resolution: WindowResolution::new(1280.0, 720.0),
+                    title: "client".into(),
                     ..default()
-                }));
-                app.add_systems(Update, frame_limiter_system);
-            }
+                }),
+                ..default()
+            }));
+            app.add_systems(Update, kill_on_grpc_unused);
         } else {
             app.add_plugins(DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -206,6 +190,7 @@ impl Plugin for MyClientPlugin {
             linear_velocity: self.linear_velocity.clone(),
             angular_velocity: self.angular_velocity.clone(),
             results: self.results.clone(),
+            last: self.last_used.clone(),
         });
         let render_app = app.sub_app_mut(RenderApp);
 
@@ -217,6 +202,7 @@ impl Plugin for MyClientPlugin {
             linear_velocity: self.linear_velocity.clone(),
             angular_velocity: self.angular_velocity.clone(),
             results: self.results.clone(),
+            last: self.last_used.clone(),
         });
         render_app.add_systems(
             Render,
@@ -418,7 +404,6 @@ fn build_client_plugin(auth_addr: SocketAddr, client_addr: SocketAddr) -> Client
         net: net_config,
         ..Default::default()
     };
-    dbg!("build client");
     ClientPlugins::new(config)
 }
 
@@ -445,6 +430,10 @@ fn attach_name(mut my_name: ResMut<MyPlayerName>, mut commands: Commands) {
     }
 }
 
-fn frame_limiter_system() {
-    thread::sleep(time::Duration::from_millis(10)); // Example fixed sleep[1]
+fn kill_on_grpc_unused(grpc: Res<ControlViaGrpc>, mut exit: EventWriter<AppExit>) {
+    if { futures_lite::future::block_on(async { grpc.last.lock().await.clone() }) }.elapsed()
+        > Duration::from_secs(30)
+    {
+        exit.send(AppExit::Success);
+    }
 }

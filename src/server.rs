@@ -90,7 +90,6 @@ pub fn main() {
     let mut app = App::new();
     app.add_plugins(server_plugin);
     app.run();
-    dbg!("closing");
 }
 
 fn get_key() -> [u8; PRIVATE_KEY_BYTES] {
@@ -118,9 +117,11 @@ impl Plugin for ServerPlugin {
         let client_ids = Arc::new(RwLock::new(HashMap::<u64, Entity>::new()));
         if self.headless {
             app.add_plugins(DefaultPlugins.set(WindowPlugin {
-                primary_window: None,
-                exit_condition: bevy::window::ExitCondition::DontExit,
-                close_when_requested: false,
+                primary_window: Some(Window {
+                    resolution: WindowResolution::new(1280.0, 720.0),
+                    title: "server".into(),
+                    ..default()
+                }),
                 ..default()
             }));
         } else {
@@ -128,7 +129,7 @@ impl Plugin for ServerPlugin {
                 primary_window: Some(Window {
                     resolution: WindowResolution::new(1280.0, 720.0),
                     title: "server".into(),
-                    ..default() // [1][5]
+                    ..default()
                 }),
                 ..default()
             }));
@@ -218,9 +219,10 @@ fn start_server(mut commands: Commands, mut windows: Query<&mut Window>) {
     window.cursor_options.visible = false;
 }
 
-fn start_server_headless(mut commands: Commands, mut windows: Query<&mut Window>) {
+fn start_server_headless(mut commands: Commands) {
     commands.start_server();
 }
+
 fn handle_disconnect_event(trigger: Trigger<DisconnectEvent>, client_ids: Res<ClientIds>) {
     if let Netcode(client_id) = trigger.event().client_id {
         client_ids.0.write().unwrap().remove(&client_id);

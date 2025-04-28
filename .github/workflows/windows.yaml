@@ -128,13 +128,30 @@ jobs:
         cd .. # Return to previous directory
         echo "Created release-${{ steps.commit_hash.outputs.hash }}.zip"
 
+    - name: Get commit message
+      id: commit_message
+      run: |
+          MESSAGE=$(git log -1 --pretty=%B)
+          echo "MESSAGE=$MESSAGE" >> $GITHUB_ENV
+
+    - name: Extract version from commit message
+      id: extract_version
+      run: |
+        VERSION=$(echo "$MESSAGE" | grep -oP 'v\d+\.\d+\.\d+')
+        if [[ -z "$VERSION" ]]; then
+          echo "No version found in commit message"
+          VERSION="0.0.0"
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
     - name: Create Release and Upload Zip
       uses: ncipollo/release-action@v1
       with:
-        tag: ${{ steps.commit_hash.outputs.hash }}
-        name: "Release ${{ steps.commit_hash.outputs.hash }}"
-        artifacts: "release-${{ steps.commit_hash.outputs.hash }}.zip" # Point to the single zip file[5]
+        tag: ${{ env.VERSION }}
+        name: "Release ${{ env.VERSION }}"
+        artifacts: "release-${{ env.VERSION }}.zip"
         replacesArtifacts: true
         allowUpdates: true
         token: ${{ secrets.GITHUB_TOKEN }}
-        generateReleaseNotes: true # Generates release notes based on commits since last tag
+        generateReleaseNotes: true

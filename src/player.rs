@@ -178,7 +178,6 @@ fn game_end_system(
             || game_end_condition.players_finished == player_count.max);
     if condition {
         let id_2_name: HashMap<_, _> = name_q.iter().map(|(n, c)| (c.from.unwrap(), n)).collect();
-        dbg!(&id_2_name);
         let mut all_players: Vec<_> = players
             .iter()
             .map(|(l, f, c)| match c.target {

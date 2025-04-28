@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use bevy::math::Quat;
 use tokio::sync::Mutex;
@@ -16,10 +16,15 @@ pub struct GRPCService {
     pub linear_velocity: Arc<Mutex<bevy::math::Vec3>>,
     pub angular_velocity: Arc<Mutex<bevy::math::Vec3>>,
     pub results: Arc<Mutex<Vec<ResultEntry>>>,
+    pub last_used: Arc<Mutex<Instant>>,
 }
 
 impl GRPCService {
     pub async fn get_state(&self) -> Result<Response<StateResponse>, Status> {
+        {
+            let mut n = self.last_used.lock().await;
+            *n = Instant::now();
+        }
         let screen_copy = {
             let s = self.screen.lock().await;
             s.clone()
@@ -61,6 +66,10 @@ impl GRPCService {
     }
 
     pub async fn input(&self, r: InputRequest) -> Result<Response<EmptyResponse>, Status> {
+        {
+            let mut n = self.last_used.lock().await;
+            *n = Instant::now();
+        }
         let d = Direction {
             forward: r.forward,
             back: r.back,

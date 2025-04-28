@@ -143,6 +143,7 @@ class MarbleClient:
                 'screen': screen_file,
                 'linear_velocity': current_state.linear_velocity,
                 'angular_velocity': current_state.angular_velocity,
+                'relative_angular_velocity': current_state.relative_angular_velocity,
                 'finished': current_state.finished,
                 'results': current_state.results,
             }
@@ -198,6 +199,9 @@ class MarbleClient:
                 'angular_velocity_x': state['angular_velocity'].x,
                 'angular_velocity_y': state['angular_velocity'].y,
                 'angular_velocity_z': state['angular_velocity'].z,
+                'relative_angular_velocity_x': state['relative_angular_velocity'].x,
+                'relative_angular_velocity_y': state['relative_angular_velocity'].y,
+                'relative_angular_velocity_z': state['relative_angular_velocity'].z,
                 'finished': state['finished'],
                 'results': results_list,  # Store list of result dicts
 

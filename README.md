@@ -178,3 +178,11 @@ Options:
 ```
 
 
+### Tournament
+
+For the tournament at the end of the hackathon, each team will run their client + agent on their own machine and connect to the server over the network.
+So please prepare to pass the required cli arguments (seed and server) to the client and run it independently of a local server.
+
+Each race in the tournament will last 3 minutes and we race on 3 unknown tracks.
+
+

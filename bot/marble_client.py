@@ -4,6 +4,7 @@ import logging
 import time
 import os
 import uuid
+import numpy as np
 
 # Note: You need to generate the Python protobuf files from your .proto file first.
 # Run the following command in your terminal in the directory containing marble.proto:
@@ -95,6 +96,40 @@ class MarbleClient:
             You should implement your logic here to decide the input based
             on the provided state information (e.g., screen data, velocity).
         """
+        # Calculate current speed
+        current_speed_vector = np.array([state.linear_velocity.x, state.linear_velocity.y, state.linear_velocity.z])
+        current_speed = np.linalg.norm(current_speed_vector)
+
+        TARGET_SPEED = 1.0
+        SPEED_TOLERANCE = 0.2
+
+        # Initialize controls
+        forward = False
+        back = False
+        left = False
+        right = False
+        reset = False
+
+        if current_speed < (TARGET_SPEED - SPEED_TOLERANCE):
+            # Too slow: speed up
+            forward = True
+        elif current_speed > (TARGET_SPEED + SPEED_TOLERANCE):
+            # Too fast: slow down
+            back = True
+        else:
+            # Within acceptable range: do nothing
+            pass
+
+            time.sleep(0.2)  # Keep a small delay to match the environment
+
+            return service_pb2.InputRequest(
+                forward=forward,
+                back=back,
+                left=left,
+                right=right,
+                reset=reset
+            )
+
         # Placeholder logic: Replace this with your actual decision-making process.
         # Example: Always move forward.
         forward = True

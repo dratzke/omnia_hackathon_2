@@ -11,3 +11,5 @@ bot/raw_screens_*
 bot/output_images_*
 bot/marble_client_records_*.csv
 ./teams
+.idea
+*.parquet

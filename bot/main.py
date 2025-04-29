@@ -2,12 +2,16 @@ import logging
 import os
 from pathlib import Path
 
+from marble_neural_network import MarbleNeuralNetwork
 import util
 import marble_client
 import click
 import subprocess
 from typing import Optional
 from concurrent.futures import ProcessPoolExecutor
+import torch.nn as nn
+import torch
+import pandas as pd
 
 # Import the generated modules
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
@@ -28,6 +32,9 @@ logger.handlers.clear()
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
+num_generations = 500
+mutation_rate = 0.1
+population_size = 10
 
 @click.command()
 @click.option('--no-server', default=False, is_flag=True, help='Do not start the server')
@@ -46,19 +53,65 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
                                            server_executable=str(server_executable))
 
     client_executable = bin_path / f'client{executable_suffix}'
-    with ProcessPoolExecutor(max_workers=clients) as executor:
-        list(executor.map(run_client, [(i, seed, str(client_executable)) for i in range(clients)]))
+    population = initialize_population(clients)
+    for generation in range(num_generations):
+        print("Generation:", generation + 1)
+        best_accuracy = 0
+        best_individual = None
+        for idx, individual in enumerate(population):
+            df = run_client((idx, seed, str(client_executable), individual))
+            fitness = fitness_function(df)
+            if fitness > best_accuracy:
+                best_accuracy = fitness
+                best_individual = individual
+        print("Best accuracy in generation", generation + 1, ":", best_accuracy)
+        print("Best individual:", best_individual)
+
+        next_generation = []
+
+        # Select top individuals for next generation
+        selected_individuals = population[:population_size // 2]
+
+        # Crossover and mutation
+        for i in range(0, len(selected_individuals), 2):
+            parent1 = selected_individuals[i]
+            parent2 = selected_individuals[i + 1]
+            child1, child2 = crossover(parent1, parent2)
+            child1 = mutate(child1)
+            child2 = mutate(child2)
+            next_generation.extend([child1, child2])
+
+        population = next_generation
+    
     if server:
         server.kill()
 
 
-def run_client(args: (int, int, str)) -> Optional[subprocess.Popen]:
-    client_id, seed, executable_path = args
+def fitness_function(df):
+    if df.finished: 
+        return 1
+
+def crossover(parent1, parent2):
+    child1 = MarbleNeuralNetwork()
+    child2 = MarbleNeuralNetwork()
+    child1.fc1.weight.data = torch.cat((parent1.fc1.weight.data[:16], parent2.fc1.weight.data[16:]), dim=0)
+    child2.fc1.weight.data = torch.cat((parent2.fc1.weight.data[:16], parent1.fc1.weight.data[16:]), dim=0)
+    return child1, child2
+
+def mutate(model):
+    for param in model.parameters():
+        if torch.rand(1).item() < mutation_rate:
+            param.data += torch.randn_like(param.data) * 0.1  # Adding Gaussian noise with std=0.1
+    return model
+
+def run_client(args: (int, int, str, nn.Module)):
+    client_id, seed, executable_path, neural_network = args
     name = 'A' + str(client_id)
     client = util.start_client_process(4000, '127.0.0.1', 5001 + client_id, name, 50051 + client_id, seed, False,
                                        executable=executable_path)
 
-    bot = marble_client.MarbleClient('localhost', str(50051 + client_id), 'raw_screens_' + str(client_id), name)
+    bot = marble_client.MarbleClient('localhost', str(50051 + client_id), 'raw_screens_' + str(client_id), name, neural_network)
+    df = pd.Dataframe()
     try:
         bot.run_interaction_loop()
     finally:
@@ -71,7 +124,16 @@ def run_client(args: (int, int, str)) -> Optional[subprocess.Popen]:
         logger.info(f'Client {client.pid} killed')
     else:
         logger.error('Client process failed to start or was None')
+        
+    return df
 
+
+def initialize_population(population_size):
+    population = []
+    for i in range(population_size):
+        model = MarbleNeuralNetwork()
+        population.append(model)
+    return population
 
 if __name__ == '__main__':
     run()

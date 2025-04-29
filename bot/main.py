@@ -49,13 +49,16 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
     executable_suffix = '.exe' if os.name == 'nt' else ''
     server_executable = bin_path / f'server{executable_suffix}' 
     client_executable = bin_path / f'client{executable_suffix}'
+    
     population = initialize_population(clients)
     for generation in range(num_generations):
-        server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless,
-                                           server_executable=str(server_executable))
+        if not no_server:
+            server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless,
+                                            server_executable=str(server_executable))
         print("Generation:", generation + 1)
         best_accuracy = 0
         best_individual = None
+        
         for idx, individual in enumerate(population):
             df = run_client((idx, seed, str(client_executable), individual))
             fitness = fitness_function(df)
@@ -65,21 +68,11 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
         print("Best accuracy in generation", generation + 1, ":", best_accuracy)
         print("Best individual:", best_individual)
 
-        next_generation = []
+        new_population = [mutate(best_individual) for _ in range(clients)]
 
-        # Select top individuals for next generation
-        selected_individuals = population[:population_size // 2]
-
-        # Crossover and mutation
-        for i in range(0, len(selected_individuals), 2):
-            parent1 = selected_individuals[i]
-            parent2 = selected_individuals[i + 1]
-            child1, child2 = crossover(parent1, parent2)
-            child1 = mutate(child1)
-            child2 = mutate(child2)
-            next_generation.extend([child1, child2])
-
-        population = next_generation
+        # Optionally, retain the best individual without mutation
+        new_population[0] = best_individual  # Keep elite
+        population = new_population
     
     if server:
         server.kill()

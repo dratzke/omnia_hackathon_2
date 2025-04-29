@@ -6,6 +6,8 @@ import os
 import uuid
 import numpy as np
 import math
+import torch.nn as nn
+import torch
 
 # Note: You need to generate the Python protobuf files from your .proto file first.
 # Run the following command in your terminal in the directory containing marble.proto:
@@ -29,7 +31,7 @@ class MarbleClient:
     in a pandas DataFrame.
     """
 
-    def __init__(self, host: str, port: int, screen_dir: str, name: str):
+    def __init__(self, host: str, port: int, screen_dir: str, name: str, model: nn.Module):
         """
         Initializes the MarbleClient.
 
@@ -40,6 +42,8 @@ class MarbleClient:
         self.host = host
         self.port = port
         self.name = name
+        self.model = model
+        self.model.eval()
         # Create an insecure channel to connect to the server
         self.channel = grpc.insecure_channel(f'{self.host}:{self.port}')
         # Create a stub (client) for the MarbleService
@@ -97,42 +101,29 @@ class MarbleClient:
             You should implement your logic here to decide the input based
             on the provided state information (e.g., screen data, velocity).
         """
-        # Calculate current speed
-        lv = state.linear_velocity
-        current_speed = math.sqrt(lv.x ** 2 + lv.y ** 2 + lv.z ** 2)
+        vec = [
+            state.linear_velocity.x,
+            state.linear_velocity.y,
+            state.linear_velocity.z,
+            state.angular_velocity.x,
+            state.angular_velocity.y,
+            state.angular_velocity.z,
+            state.relative_angular_velocity.x,
+            state.relative_angular_velocity.y,
+            state.relative_angular_velocity.z
+        ]
+        input_tensor = torch.tensor(vec, dtype=torch.float32)
 
-        print(f"Current Speed: {current_speed} m/s - Linear Velocity: X: {lv.x} Y: {lv.y} Z: {lv.z}")
+        # Get the neural network's prediction
+        output = self.model(input_tensor)
         
-        # Define your desired average speed
-        TARGET_SPEED = 10.0  # m/s, adjust this as you like
-        SPEED_TOLERANCE = 0.5  # m/s, how much deviation we allow
-        
-        
-        # Initialize controls
-        forward = False
-        back = False
-        left = False
-        right = False
-        reset = False
-
-        if current_speed < (TARGET_SPEED - SPEED_TOLERANCE):
-            # Too slow: speed up
-            forward = True
-        elif current_speed > (TARGET_SPEED + SPEED_TOLERANCE):
-            # Too fast: slow down
-            back = True
-        else:
-            # Within acceptable range: do nothing
-            pass
-
-        time.sleep(0.2)  # Keep a small delay to match the environment
-
+        # Map the network output to the InputRequest
         return service_pb2.InputRequest(
-            forward=forward,
-            back=back,
-            left=left,
-            right=right,
-            reset=reset
+            forward=output[0].item() > 0.5,
+            back=output[1].item() > 0.5,
+            left=output[2].item() > 0.5,
+            right=output[3].item() > 0.5,
+            reset=output[4].item() > 0.5
         )
 
     def run_interaction_loop(self):

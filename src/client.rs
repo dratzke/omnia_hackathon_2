@@ -15,6 +15,7 @@ use lightyear::{
     shared::replication::components::Controlled,
 };
 use std::{
+    collections::HashMap,
     net::SocketAddr,
     sync::Arc,
     time::{Duration, Instant},
@@ -220,6 +221,7 @@ impl Plugin for MyClientPlugin {
             physics: false,
             player_count: 0,
             max_game_seconds: u32::MAX,
+            player_2_tex: HashMap::new(),
         });
         app.add_systems(Startup, connect_client);
     }

@@ -20,6 +20,12 @@ pub struct PlayerPlugin {
     pub physics: bool,
     pub player_count: u8,
     pub max_game_seconds: u32,
+    pub player_2_tex: HashMap<String, String>,
+}
+
+#[derive(Resource)]
+struct PlayerTexture {
+    player_2_tex: HashMap<String, String>,
 }
 
 #[derive(Resource, Debug)]
@@ -42,10 +48,17 @@ pub struct LastVelocity {
     pub lin: Option<Vec3>,
 }
 
+#[derive(Component)]
+struct TextureUpdated;
+
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         if self.physics {
+            app.insert_resource(PlayerTexture {
+                player_2_tex: self.player_2_tex.clone(),
+            });
             app.add_systems(Update, attach_player_model_server);
+            app.add_systems(Update, texture_update);
             app.add_systems(Update, game_end_system);
             app.add_systems(Update, sync_velocity_physics);
         } else {
@@ -223,6 +236,13 @@ fn game_end_system(
 
         game_end_condition.evaluated = true;
     }
+}
+
+fn texture_update(
+    players: Query<(&mut Mesh3d, &ControlledBy), Without<TextureUpdated>>,
+    name_q: Query<(&PlayerName, &Replicated)>,
+    name_2_tex: Res<PlayerTexture>,
+) {
 }
 
 #[derive(Bundle)]

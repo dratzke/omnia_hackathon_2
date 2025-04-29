@@ -146,6 +146,7 @@ impl Plugin for ServerPlugin {
             physics: true,
             player_count: self.player_count,
             max_game_seconds: self.max_game_seconds,
+            player_2_tex: HashMap::new(),
         });
         app.add_plugins(ServerInputPlugin);
         app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());

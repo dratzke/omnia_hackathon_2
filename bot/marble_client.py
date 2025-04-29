@@ -168,8 +168,8 @@ class MarbleClient:
                 'finished': current_state.finished,
                 'results': current_state.results,
             }
-            with open(screen_file, 'wb') as f:
-                f.write(current_state.screen)
+            # with open(screen_file, 'wb') as f:
+            #     f.write(current_state.screen)
 
             self.records.append((recorded_state, input_to_send))
             if current_state.finished:

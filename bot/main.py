@@ -47,14 +47,12 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
     if isinstance(bin_path, str):
         bin_path = Path(bin_path)
     executable_suffix = '.exe' if os.name == 'nt' else ''
-    server_executable = bin_path / f'server{executable_suffix}'
-    if not no_server:
-        server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless,
-                                           server_executable=str(server_executable))
-
+    server_executable = bin_path / f'server{executable_suffix}' 
     client_executable = bin_path / f'client{executable_suffix}'
     population = initialize_population(clients)
     for generation in range(num_generations):
+        server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless,
+                                           server_executable=str(server_executable))
         print("Generation:", generation + 1)
         best_accuracy = 0
         best_individual = None
@@ -88,8 +86,7 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
 
 
 def fitness_function(df):
-    if df.finished: 
-        return 1
+    return 1
 
 def crossover(parent1, parent2):
     child1 = MarbleNeuralNetwork()

@@ -41,7 +41,7 @@ fn movement(
                     position_query.get_mut(*player_entity)
                 {
                     if time.elapsed_secs() - last_touched.at < 1.0 || last_touched.touching {
-                        torque_fucntion(velocity, force, last_velocity, input);
+                        torque_function(velocity, force, last_velocity, input);
                     }
                 }
             }
@@ -49,12 +49,15 @@ fn movement(
     }
 }
 
-fn torque_fucntion(
+fn torque_function(
     mut velocity: Mut<Velocity>,
     mut force: Mut<ExternalForce>,
     mut last_velocity: Mut<LastVelocity>,
     input: &Inputs,
 ) {
+    if velocity.linvel.length() < 0.0001 && last_velocity.lin.is_none() {
+        return;
+    }
     let lin = if velocity.linvel.length() < 0.1 {
         last_velocity.lin.unwrap_or(velocity.linvel.normalize())
     } else {

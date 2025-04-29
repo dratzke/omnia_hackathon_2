@@ -84,7 +84,31 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
 
 
 def fitness_function(df):
-    return 0
+    last_data_frame = df.iloc[-1]
+
+    client_name = last_data_frame["client_name"]
+    
+    result_list = last_data_frame["results"]
+
+    bot_result = next(n for n in result_list if n['name']==client_name)
+    
+    bot_finish_time = bot_result['finish_time']
+    bot_last_touched_road_id = bot_result['last_touched_road_id']
+    bot_last_touched_road_time = bot_result['last_touched_road_time']
+     
+    max_finish_time = max(item['finish_time'] for item in result_list)
+    max_last_touched_road_id = max(item['last_touched_road_id'] for item in result_list)
+    max_last_touched_road_time = max(item['last_touched_road_time'] for item in result_list)
+
+    score = 0
+    if max_finish_time > 0:
+        score =score + 0.5*bot_finish_time/max_finish_time
+    if max_last_touched_road_id > 0:
+        score = score + 0.3 * bot_last_touched_road_id/max_last_touched_road_id
+    if max_last_touched_road_time > 0:
+        score = score + 0.2* bot_last_touched_road_time/max_last_touched_road_time
+
+    return score
 
 def crossover(parent1, parent2):
     child1 = MarbleNeuralNetwork()

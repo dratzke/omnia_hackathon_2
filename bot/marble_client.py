@@ -224,6 +224,7 @@ class MarbleClient:
                 'relative_angular_velocity_y': state['relative_angular_velocity'].y,
                 'relative_angular_velocity_z': state['relative_angular_velocity'].z,
                 'finished': state['finished'],
+                'client_name': self.name,
                 'results': results_list,  # Store list of result dicts
 
                 # Input fields

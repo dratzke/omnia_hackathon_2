@@ -149,12 +149,12 @@ fn cursor_grab_system(
             CursorGrabMode::None => {
                 window.cursor_options.grab_mode = CursorGrabMode::Locked;
                 window.cursor_options.visible = false;
-                cursor_lock.0 = false;
+                cursor_lock.0 = true;
             }
             _ => {
                 window.cursor_options.grab_mode = CursorGrabMode::None;
                 window.cursor_options.visible = true;
-                cursor_lock.0 = true;
+                cursor_lock.0 = false;
             }
         }
     }
@@ -163,7 +163,8 @@ fn cursor_grab_system(
 fn cursor_center(cursor_lock: Res<CursorLock>, mut windows: Query<&mut Window>) {
     if cursor_lock.0 {
         for mut w in windows.iter_mut() {
-            w.set_cursor_position(Some(Vec2::new(100.0, 100.0)));
+            let c = Vec2::new(w.width() / 2.0, w.height() / 2.0);
+            w.set_cursor_position(Some(c));
         }
     }
 }

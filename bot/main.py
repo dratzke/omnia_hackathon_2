@@ -74,8 +74,8 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
         new_population[0] = best_individual  # Keep elite
         population = new_population
     
-    if server:
-        server.kill()
+        if server:
+            server.kill()
 
 
 def fitness_function(df):

@@ -5,6 +5,7 @@ import time
 import os
 import uuid
 import numpy as np
+import math
 
 # Note: You need to generate the Python protobuf files from your .proto file first.
 # Run the following command in your terminal in the directory containing marble.proto:
@@ -97,12 +98,16 @@ class MarbleClient:
             on the provided state information (e.g., screen data, velocity).
         """
         # Calculate current speed
-        current_speed_vector = np.array([state.linear_velocity.x, state.linear_velocity.y, state.linear_velocity.z])
-        current_speed = np.linalg.norm(current_speed_vector)
+        lv = state.linear_velocity
+        current_speed = math.sqrt(lv.x ** 2 + lv.y ** 2 + lv.z ** 2)
 
-        TARGET_SPEED = 1.0
-        SPEED_TOLERANCE = 0.2
-
+        print(f"Current Speed: {current_speed} m/s - Linear Velocity: X: {lv.x} Y: {lv.y} Z: {lv.z}")
+        
+        # Define your desired average speed
+        TARGET_SPEED = 10.0  # m/s, adjust this as you like
+        SPEED_TOLERANCE = 0.5  # m/s, how much deviation we allow
+        
+        
         # Initialize controls
         forward = False
         back = False
@@ -120,25 +125,7 @@ class MarbleClient:
             # Within acceptable range: do nothing
             pass
 
-            time.sleep(0.2)  # Keep a small delay to match the environment
-
-            return service_pb2.InputRequest(
-                forward=forward,
-                back=back,
-                left=left,
-                right=right,
-                reset=reset
-            )
-
-        # Placeholder logic: Replace this with your actual decision-making process.
-        # Example: Always move forward.
-        forward = True
-        back = False
-        left = False
-        right = False
-        reset = False
-
-        time.sleep(0.2)
+        time.sleep(0.2)  # Keep a small delay to match the environment
 
         return service_pb2.InputRequest(
             forward=forward,

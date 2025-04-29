@@ -5,6 +5,7 @@ import time
 import os
 import uuid
 import numpy as np
+import math
 
 # Note: You need to generate the Python protobuf files from your .proto file first.
 # Run the following command in your terminal in the directory containing marble.proto:

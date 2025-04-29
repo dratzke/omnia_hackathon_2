@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 from PIL import Image
 import os
@@ -10,11 +12,11 @@ import tqdm
 
 
 def save_images_from_dataframe(
-    df: pd.DataFrame,
-    output_dir: str,
-    width: int = 1280,
-    height: int = 720,
-    prefix: str = 'image_'
+        df: pd.DataFrame,
+        output_dir: str,
+        width: int = 1280,
+        height: int = 720,
+        prefix: str = 'image_'
 ) -> None:
     """
     Saves images from a DataFrame's 'screen' column (containing image bytes)
@@ -44,14 +46,14 @@ def save_images_from_dataframe(
 
 
 def start_server_process(
-    auth_port: int,
-    game_port: int,
-    players: int,
-    max_game_seconds: int,
-    seed: int,
-    low_gpu: bool,
-    headless: bool,
-    server_executable: str = "../server"
+        auth_port: int,
+        game_port: int,
+        players: int,
+        max_game_seconds: int,
+        seed: int,
+        low_gpu: bool,
+        headless: bool,
+        server_executable: str = "../server"
 ) -> Optional[subprocess.Popen]:
     """
     Starts the server executable as a background process with specified arguments.
@@ -67,6 +69,9 @@ def start_server_process(
         A subprocess.Popen object representing the started process,
         or None if the process could not be started.
     """
+    if not Path(server_executable).is_file():
+        raise FileNotFoundError(f"Server executable file not found: {server_executable}")
+
     command = [
         server_executable,
         "--auth-port", str(auth_port),
@@ -100,14 +105,14 @@ def start_server_process(
 
 
 def start_client_process(
-    auth_port: int,
-    server_host: str,
-    client_port: int,
-    player_name: str,
-    grpc_port: int,
-    seed: int,
-    low_gpu: bool,
-    executable: str = "../client"
+        auth_port: int,
+        server_host: str,
+        client_port: int,
+        player_name: str,
+        grpc_port: int,
+        seed: int,
+        low_gpu: bool,
+        executable: str = "../client"
 ) -> Optional[subprocess.Popen]:
     """
     Starts the client application as a separate process.
@@ -125,6 +130,8 @@ def start_client_process(
         process. Returns `None` if the executable cannot be found at the specified
         path or if any other error occurs during process creation.
     """
+    if not Path(executable).is_file():
+        raise FileNotFoundError(f"Client executable file not found: {executable}")
     command = [
         executable,
         "--auth-port", str(auth_port),

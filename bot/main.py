@@ -67,10 +67,14 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
             results = list(executor.map(run_client, args))  # Each result is a df
 
         # Evaluate fitness
-        best_name = fitness_function(results[0])  # returns name
+        fitnesses = [fitness_function(df) for df in results] # returns name and fitness tuple array
+        best_name, _ = max(fitnesses, key=lambda x: x[1])
+        print(f'Population: {population} - Best Name: {best_name}')
         
-        best_individual = next(ind for ind in population if ind['name'] == best_name)
+        best_individual = next(ind for ind in population if ind['name'] == int(best_name))
 
+        torch.save(best_individual["model"].state_dict(), f"model-generation{generation}.pth")
+        
         # Create new population by mutating best
         new_population = [
             {'name': i, 'model': mutate(best_individual['model'])}
@@ -108,7 +112,7 @@ def fitness_function(df):
     if max_last_touched_road_time > 0:
         score = score + 0.2* bot_last_touched_road_time/max_last_touched_road_time
 
-    return score
+    return (client_name, score)
 
 def crossover(parent1, parent2):
     child1 = MarbleNeuralNetwork()

@@ -105,8 +105,6 @@ class MarbleClient:
         # Define your desired average speed
         TARGET_SPEED = 10.0  # m/s, adjust this as you like
         SPEED_TOLERANCE = 0.5  # m/s, how much deviation we allow
-
-        print(state.results)
         
         
         # Initialize controls

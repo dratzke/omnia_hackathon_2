@@ -239,10 +239,36 @@ fn game_end_system(
 }
 
 fn texture_update(
-    players: Query<(&mut Mesh3d, &ControlledBy), Without<TextureUpdated>>,
+    mut players: Query<
+        (&mut MeshMaterial3d<StandardMaterial>, &ControlledBy),
+        Without<TextureUpdated>,
+    >,
     name_q: Query<(&PlayerName, &Replicated)>,
     name_2_tex: Res<PlayerTexture>,
+    asset_server: Res<AssetServer>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    if !players.is_empty() {
+        let id_2_name: HashMap<_, _> = name_q.iter().map(|(n, c)| (c.from.unwrap(), n)).collect();
+        for (mut material_target, controlled_by) in players.iter_mut() {
+            match controlled_by.target {
+                lightyear::prelude::NetworkTarget::Single(client_id) => {
+                    if let Some(player_name) = id_2_name.get(&client_id) {
+                        if let Some(texture_path) = name_2_tex.player_2_tex.get(&player_name.0) {
+                            let material = StandardMaterial {
+                                // Load textures from the concrete directory
+                                base_color_texture: Some(asset_server.load(texture_path)),
+                                ..default()
+                            };
+
+                            material_target.0 = materials.add(material);
+                        }
+                    }
+                }
+                _ => continue,
+            }
+        }
+    }
 }
 
 #[derive(Bundle)]

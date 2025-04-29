@@ -135,6 +135,10 @@ impl Plugin for ServerPlugin {
             }));
         }
 
+        let mut player_2_tex = HashMap::new();
+        player_2_tex.insert("penguballs".to_string(), "Penguballs.png".to_string());
+        player_2_tex.insert("tmj".to_string(), "TMJ.png".to_string());
+
         app.add_plugins(build_server_plugin(
             self.game_server_addr.port(),
             self.private_key,
@@ -146,7 +150,7 @@ impl Plugin for ServerPlugin {
             physics: true,
             player_count: self.player_count,
             max_game_seconds: self.max_game_seconds,
-            player_2_tex: HashMap::new(),
+            player_2_tex,
         });
         app.add_plugins(ServerInputPlugin);
         app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());

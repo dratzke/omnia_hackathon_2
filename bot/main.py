@@ -111,7 +111,7 @@ def run_client(args: (int, int, str, nn.Module)):
                                        executable=executable_path)
 
     bot = marble_client.MarbleClient('localhost', str(50051 + client_id), 'raw_screens_' + str(client_id), name, neural_network)
-    df = pd.Dataframe()
+    df = pd.DataFrame()
     try:
         bot.run_interaction_loop()
     finally:

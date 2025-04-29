@@ -12,6 +12,7 @@ from concurrent.futures import ProcessPoolExecutor
 import torch.nn as nn
 import torch
 import pandas as pd
+import time
 
 # Import the generated modules
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
@@ -80,11 +81,13 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
             {'name': i, 'model': mutate(best_individual['model'])}
             for i in range(clients)
         ]
-        new_population[0] = best_individual  # Keep the elite with its original name
+        new_population[0]["model"] = best_individual['model']  # Keep the elite with its original name
         population = new_population
     
         if server:
             server.kill()
+            
+        time.sleep(1)
 
 
 def fitness_function(df):

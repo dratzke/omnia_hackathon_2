@@ -51,7 +51,7 @@ run-both: build
     ./target/release/server --auth-port 4000 --game-port 5000 --players 2 --max-game-seconds 20 & 
     echo $$ > server.pid 
     sleep 2 
-    ./target/release/client --auth-port 4000 --server 127.0.0.1 --client-port 5001 --name TMJ &
+    ./target/release/client --auth-port 4000 --server 127.0.0.1 --client-port 5001 --name Tinkclink &
     echo $$ > client1.pid
     sleep 2
     ./target/release/client --auth-port 4000 --server 127.0.0.1 --client-port 5002 --name Penguballs

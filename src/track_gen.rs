@@ -202,13 +202,14 @@ impl Track {
     }
 
     fn select_next_block(&self) -> BlockType {
-        if self.turn_since_down > 1.0 * PI {
+        if self.turn_since_down > 0.5 * PI {
             return BlockType::Slope {
                 length: 25.0,
                 height_change: -((self.noise.get([
                     self.current_end.position.y as f64 * 0.3,
                     self.current_end.position.x as f64 * 0.3,
                 ]) as f32)
+                    .abs()
                     * 10.0
                     + 10.0),
             };

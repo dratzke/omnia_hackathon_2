@@ -56,22 +56,28 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
             server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless,
                                             server_executable=str(server_executable))
         print("Generation:", generation + 1)
-        best_accuracy = 0
         best_individual = None
         
-        for idx, individual in enumerate(population):
-            df = run_client((idx, seed, str(client_executable), individual))
-            fitness = fitness_function(df)
-            if fitness > best_accuracy:
-                best_accuracy = fitness
-                best_individual = individual
-        print("Best accuracy in generation", generation + 1, ":", best_accuracy)
-        print("Best individual:", best_individual)
+        args = [(idx, seed, str(client_executable), individual) for idx, individual in enumerate(population)]
 
+        # Prepare arguments
+        args = [(idx, seed, str(client_executable), individual) for idx, individual in enumerate(population)]
+
+        # Run in parallel
+        with ProcessPoolExecutor() as executor:
+            results = list(executor.map(run_client, args))  # Each result is a df
+
+        # Evaluate fitness
+        fitness_scores = [fitness_function(df) for df in results]
+        best_idx = max(range(len(fitness_scores)), key=lambda i: fitness_scores[i])
+        best_individual = population[best_idx]
+        best_fitness = fitness_scores[best_idx]
+         
+        print(f"Best fitness: {best_fitness}")
+
+        # Create new population by mutating best
         new_population = [mutate(best_individual) for _ in range(clients)]
-
-        # Optionally, retain the best individual without mutation
-        new_population[0] = best_individual  # Keep elite
+        new_population[0] = best_individual  # Elitism
         population = new_population
     
         if server:
@@ -106,8 +112,8 @@ def run_client(args: (int, int, str, nn.Module)):
         bot.run_interaction_loop()
     finally:
         df = bot.get_records_as_dataframe()
-        df.to_parquet(f'marble_client_records_{client_id}.parquet', index=False)
-        util.save_images_from_dataframe(df, f'output_images_{client_id}')
+        #df.to_parquet(f'marble_client_records_{client_id}.parquet', index=False)
+        #util.save_images_from_dataframe(df, f'output_images_{client_id}')
 
     if client:
         client.kill()

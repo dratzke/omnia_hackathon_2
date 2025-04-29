@@ -13,3 +13,4 @@ bot/marble_client_records_*.csv
 ./teams
 .idea
 *.parquet
+release/latest/**/*

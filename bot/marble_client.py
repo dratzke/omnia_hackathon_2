@@ -50,6 +50,8 @@ class MarbleClient:
         self.stub = service_pb2_grpc.MarbleServiceStub(self.channel)
         # List to store (state, input) tuples recorded during the loop
         self.records = []
+        self.initial_push = True
+        self.initial_push_times = 0
         self.screen_dir = screen_dir
         os.makedirs(self.screen_dir, exist_ok=True)  # Ensure the directory exists
         print(f"MarbleClient initialized for {self.host}:{self.port}")
@@ -117,9 +119,15 @@ class MarbleClient:
         # Get the neural network's prediction
         output = self.model(input_tensor)
         
+        forward = self.initial_push or output[0].item() > 0.5
+        if self.initial_push_times < 5:
+            self.initial_push_times += 1
+        else:
+            self.initial_push = False
+        
         # Map the network output to the InputRequest
         return service_pb2.InputRequest(
-            forward=output[0].item() > 0.5,
+            forward=forward,
             back=output[1].item() > 0.5,
             left=output[2].item() > 0.5,
             right=output[3].item() > 0.5,

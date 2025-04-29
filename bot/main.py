@@ -58,26 +58,25 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
         print("Generation:", generation + 1)
         best_individual = None
         
-        args = [(idx, seed, str(client_executable), individual) for idx, individual in enumerate(population)]
-
         # Prepare arguments
-        args = [(idx, seed, str(client_executable), individual) for idx, individual in enumerate(population)]
+        args = [(individual["name"], seed, str(client_executable), individual["model"]) for individual in population]
+
 
         # Run in parallel
         with ProcessPoolExecutor() as executor:
             results = list(executor.map(run_client, args))  # Each result is a df
 
         # Evaluate fitness
-        fitness_scores = [fitness_function(df) for df in results]
-        best_idx = max(range(len(fitness_scores)), key=lambda i: fitness_scores[i])
-        best_individual = population[best_idx]
-        best_fitness = fitness_scores[best_idx]
-         
-        print(f"Best fitness: {best_fitness}")
+        best_name = fitness_function(results[0])  # returns name
+        
+        best_individual = next(ind for ind in population if ind['name'] == best_name)
 
         # Create new population by mutating best
-        new_population = [mutate(best_individual) for _ in range(clients)]
-        new_population[0] = best_individual  # Elitism
+        new_population = [
+            {'name': i, 'model': mutate(best_individual['model'])}
+            for i in range(clients)
+        ]
+        new_population[0] = best_individual  # Keep the elite with its original name
         population = new_population
     
         if server:
@@ -85,7 +84,7 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
 
 
 def fitness_function(df):
-    return 1
+    return 0
 
 def crossover(parent1, parent2):
     child1 = MarbleNeuralNetwork()
@@ -102,7 +101,7 @@ def mutate(model):
 
 def run_client(args: (int, int, str, nn.Module)):
     client_id, seed, executable_path, neural_network = args
-    name = 'A' + str(client_id)
+    name = str(client_id)
     client = util.start_client_process(4000, '127.0.0.1', 5001 + client_id, name, 50051 + client_id, seed, False,
                                        executable=executable_path)
 
@@ -128,7 +127,7 @@ def initialize_population(population_size):
     population = []
     for i in range(population_size):
         model = MarbleNeuralNetwork()
-        population.append(model)
+        population.append({"name": i, "model": model})
     return population
 
 if __name__ == '__main__':

@@ -42,21 +42,25 @@ population_size = 10
 @click.option('--clients', default=1, help='Number of clients to start')
 @click.option('--game-seconds', default=30, help='Time the game runs until a winner is declared')
 @click.option('--seed', default=1234, help='Seed for the game world generation')
+@click.option('--generation-start', default=0, help='Generation')
+@click.option('--train', default=False, is_flag=True, help='Training mode')
 @click.option('--server-headless', default=False, is_flag=True, help='Run the server in headless mode')
 @click.option('--bin-path', default='../release/latest', help='Path to binaries')
-def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_headless: bool, bin_path: str):
+def run(no_server: bool, clients: int, game_seconds: int, seed: int, generation_start: int, train: bool, server_headless: bool, bin_path: str):
     if isinstance(bin_path, str):
         bin_path = Path(bin_path)
     executable_suffix = '.exe' if os.name == 'nt' else ''
     server_executable = bin_path / f'server{executable_suffix}' 
     client_executable = bin_path / f'client{executable_suffix}'
     
-    population = initialize_population(clients)
+    population = initialize_population(clients, generation_start)
     for generation in range(num_generations):
         if not no_server:
             server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless,
                                             server_executable=str(server_executable))
-        print("Generation:", generation + 1)
+        
+        current_generation = generation + generation_start
+        print("Generation:", current_generation)
         best_individual = None
         
         # Prepare arguments
@@ -74,7 +78,8 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_head
         
         best_individual = next(ind for ind in population if ind['name'] == int(best_name))
 
-        torch.save(best_individual["model"].state_dict(), f"model-generation{generation}.pth")
+        print(f"Best Individual of generation {current_generation} -> {best_individual}")
+        torch.save(best_individual["model"].state_dict(), f"model-generation{current_generation}.pth")
         
         # Create new population by mutating best
         new_population = [
@@ -154,10 +159,14 @@ def run_client(args: (int, int, str, nn.Module)):
     return df
 
 
-def initialize_population(population_size):
+def initialize_population(population_size, generation):
     population = []
     for i in range(population_size):
-        model = MarbleNeuralNetwork()
+        model = MarbleNeuralNetwork() 
+        if generation > 0:
+            checkpoint = torch.load(f"model-generation{generation}.pth", weights_only=True)
+            model.load_state_dict(checkpoint)
+            
         population.append({"name": i, "model": model})
     return population
 

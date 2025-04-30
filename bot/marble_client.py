@@ -19,6 +19,7 @@ except ImportError:
                   "Did you run 'uv run python -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. proto/service.proto'?")
     exit(1)
 
+logger = logging.getLogger(__name__)
 
 class MarbleClient:
     """
@@ -48,7 +49,7 @@ class MarbleClient:
         self.records = []
         self.screen_dir = screen_dir
         os.makedirs(self.screen_dir, exist_ok=True)  # Ensure the directory exists
-        print(f"MarbleClient initialized for {self.host}:{self.port}")
+        logger.debug(f"MarbleClient initialized for {self.host}:{self.port}")
 
     def get_state(self) -> service_pb2.StateResponse:
         """
@@ -62,7 +63,7 @@ class MarbleClient:
             response = self.stub.GetState(request)
             return response
         except grpc.RpcError as e:
-            print(f"Error calling GetState: {e}")
+            logger.debug(f"Error calling GetState: {e}")
             return None  # Or raise the exception
 
     def send_input(self, input_request: service_pb2.InputRequest) -> service_pb2.EmptyResponse:
@@ -79,7 +80,7 @@ class MarbleClient:
             response = self.stub.Input(input_request)
             return response
         except grpc.RpcError as e:
-            print(f"Error calling Input: {e}")
+            logger.debug(f"Error calling Input: {e}")
             return None  # Or raise the exception
 
     def decision(self, state: service_pb2.StateResponse) -> service_pb2.InputRequest:
@@ -101,7 +102,7 @@ class MarbleClient:
         lv = state.linear_velocity
         current_speed = math.sqrt(lv.x ** 2 + lv.y ** 2 + lv.z ** 2)
 
-        print(f"Current Speed: {current_speed} m/s - Linear Velocity: X: {lv.x} Y: {lv.y} Z: {lv.z}")
+        logger.debug(f"Current Speed: {current_speed} m/s - Linear Velocity: X: {lv.x} Y: {lv.y} Z: {lv.z}")
         
         # Define your desired average speed
         TARGET_SPEED = 10.0  # m/s, adjust this as you like
@@ -146,7 +147,7 @@ class MarbleClient:
         while True:
             current_state = self.get_state()
             if current_state is None:
-                print("Failed to get state, stopping loop.")
+                logger.debug("Failed to get state, stopping loop.")
                 break
 
             # 2. Determine the input based on the state
@@ -155,7 +156,7 @@ class MarbleClient:
             # 3. Send the input
             response = self.send_input(input_to_send)
             if response is None:
-                print("Failed to send input, stopping loop.")
+                logger.debug("Failed to send input, stopping loop.")
                 break
 
             # 4. Record the state and the input that was sent
@@ -177,13 +178,13 @@ class MarbleClient:
                 for index, result in enumerate(current_state.results):
                     if result.name == self.name:
                         # Assuming result.name is a string, adjust as necessary
-                        print(f"Result {index}: {result.name}, Finish Time: {result.finish_time}, "
+                        logger.debug(f"Result {index}: {result.name}, Finish Time: {result.finish_time}, "
                               f"Last Touched Road ID: {result.last_touched_road_id}, "
                               f"Last Touched Road Time: {result.last_touched_road_time}")
-                print("Marble finished, stopping loop.")
+                logger.debug("Marble finished, stopping loop.")
                 break
 
-        print("Interaction loop finished.")
+        logger.debug("Interaction loop finished.")
 
     def get_records_as_dataframe(self) -> pd.DataFrame:
         """
@@ -241,4 +242,4 @@ class MarbleClient:
         """Closes the gRPC channel."""
         if self.channel:
             self.channel.close()
-            print("gRPC channel closed.")
+            logger.debug("gRPC channel closed.")

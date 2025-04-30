@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import pandas as pd
@@ -10,6 +11,7 @@ from typing import Optional
 import time
 import tqdm
 
+logger = logging.getLogger(__name__)
 
 def save_images_from_dataframe(
         df: pd.DataFrame,
@@ -42,7 +44,7 @@ def save_images_from_dataframe(
             image.save(filepath, format='PNG')
 
         except Exception as e:
-            print(f"Error processing row {index}: {e}")
+            logger.debug(f"Error processing row {index}: {e}")
 
 
 def start_server_process(
@@ -93,14 +95,14 @@ def start_server_process(
             stderr=subprocess.DEVNULL,
         )
         time.sleep(2)
-        print(f"Started server process with PID: {process.pid}")
-        print(f"Command: {' '.join(shlex.quote(arg) for arg in command)}")
+        logger.debug(f"Started server process with PID: {process.pid}")
+        logger.debug(f"Command: {' '.join(shlex.quote(arg) for arg in command)}")
         return process
     except FileNotFoundError:
-        print(f"Error: Server executable not found at '{server_executable}'")
+        logger.debug(f"Error: Server executable not found at '{server_executable}'")
         return None
     except Exception as e:
-        print(f"Error starting server process: {e}")
+        logger.debug(f"Error starting server process: {e}")
         return None
 
 
@@ -152,12 +154,12 @@ def start_client_process(
             stderr=subprocess.DEVNULL,
         )
         time.sleep(2)
-        print(f"Started server process with PID: {process.pid}")
-        print(f"Command: {' '.join(shlex.quote(arg) for arg in command)}")
+        logger.debug(f"Started server process with PID: {process.pid}")
+        logger.debug(f"Command: {' '.join(shlex.quote(arg) for arg in command)}")
         return process
     except FileNotFoundError:
-        print(f"Error: Client executable not found at '{executable}'")
+        logger.debug(f"Error: Client executable not found at '{executable}'")
         return None
     except Exception as e:
-        print(f"Error starting client process: {e}")
+        logger.debug(f"Error starting client process: {e}")
         return None

@@ -55,16 +55,17 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, generation_
     
     population = initialize_population(clients, generation_start)
     for generation in range(num_generations):
+        current_generation = generation + generation_start
+        current_seed = current_generation if train else current_seed
         if not no_server:
-            server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless,
+            server = util.start_server_process(4000, 5000, clients, game_seconds, current_seed, False, server_headless,
                                             server_executable=str(server_executable))
         
-        current_generation = generation + generation_start
         print("Generation:", current_generation)
         best_individual = None
         
         # Prepare arguments
-        args = [(individual["name"], seed, str(client_executable), individual["model"]) for individual in population]
+        args = [(individual["name"], current_seed, str(client_executable), individual["model"]) for individual in population]
 
 
         # Run in parallel

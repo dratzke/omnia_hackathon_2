@@ -38,24 +38,36 @@ logger.setLevel(logging.INFO)
 @click.option('--bin-path', default='../release/latest', help='Path to binaries')
 @click.option('--competition', default=False, is_flag=True, help='Competition mode')
 @click.option('--competition-server', default='172.20.11.63', help='Competition server host')
-def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_headless: bool, bin_path: str,
-        competition: bool, competition_server: str):
-    if isinstance(bin_path, str):
-        bin_path = Path(bin_path)
-    executable_suffix = '.exe' if os.name == 'nt' else ''
-    server_executable = bin_path / f'server{executable_suffix}'
+def run(
+        no_server: bool,
+        clients: int,
+        game_seconds: int,
+        seed: int,
+        server_headless: bool,
+        bin_path: str,
+        competition: bool,
+        competition_server: str
+):
     if not no_server and not competition:
-        server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless,
-                                           server_executable=str(server_executable))
+        util.start_server_process(auth_port=4000, game_port=5000, players=clients, max_game_seconds=game_seconds,
+                                  seed=seed, low_gpu=False, headless=server_headless,
+                                  server_executable=build_executable(bin_path, 'server'))
 
-    client_executable = bin_path / f'client{executable_suffix}'
+    client_executable = build_executable(bin_path, 'client')
     if not competition:
         with ProcessPoolExecutor(max_workers=clients) as executor:
-            list(executor.map(run_client, [(i, seed, str(client_executable)) for i in range(clients)]))
+            list(executor.map(run_client, [(i, seed, client_executable) for i in range(clients)]))
     else:
         with ProcessPoolExecutor(max_workers=1) as executor:
             args = (client_executable, competition_server, seed)
             list(executor.map(run_competition_client, [args]))
+
+
+def build_executable(bin_path: str | Path, bin_name: str) -> str:
+    if isinstance(bin_path, str):
+        bin_path = Path(bin_path)
+    executable_suffix = '.exe' if os.name == 'nt' else ''
+    return str(bin_path / f'{bin_name}{executable_suffix}')
 
 
 def run_competition_client(args: (str, str, str)) -> Optional[subprocess.Popen]:
@@ -91,10 +103,23 @@ def run_competition_client(args: (str, str, str)) -> Optional[subprocess.Popen]:
 def run_client(args: (int, int, str)) -> Optional[subprocess.Popen]:
     client_id, seed, executable_path = args
     name = 'A' + str(client_id)
-    client = util.start_client_process(4000, '127.0.0.1', 5001 + client_id, name, 50051 + client_id, seed, False,
-                                       executable=executable_path)
+    client_port = 5001 + client_id
 
-    bot = marble_client.MarbleClient('localhost', str(50051 + client_id), 'raw_screens_' + str(client_id), name)
+    client = util.start_client_process(
+        auth_port=4000,
+        server_host='127.0.0.1',
+        client_port=5001 + client_id,
+        player_name=name,
+        grpc_port=50053 + client_id,
+        seed=seed,
+        low_gpu=False,
+        executable=executable_path)
+
+    bot = marble_client.MarbleClient(
+        host='localhost',
+        port=50051 + client_id,
+        screen_dir='raw_screens_' + str(client_id),
+        name=name)
     try:
         bot.run_interaction_loop()
     finally:

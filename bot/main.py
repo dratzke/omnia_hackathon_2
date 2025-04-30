@@ -36,20 +36,56 @@ logger.setLevel(logging.INFO)
 @click.option('--seed', default=1234, help='Seed for the game world generation')
 @click.option('--server-headless', default=False, is_flag=True, help='Run the server in headless mode')
 @click.option('--bin-path', default='../release/latest', help='Path to binaries')
-def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_headless: bool, bin_path: str):
+@click.option('--competition', default=False, is_flag=True, help='Competition mode')
+@click.option('--competition-server', default='172.20.11.63', help='Competition server host')
+def run(no_server: bool, clients: int, game_seconds: int, seed: int, server_headless: bool, bin_path: str,
+        competition: bool, competition_server: str):
     if isinstance(bin_path, str):
         bin_path = Path(bin_path)
     executable_suffix = '.exe' if os.name == 'nt' else ''
     server_executable = bin_path / f'server{executable_suffix}'
-    if not no_server:
+    if not no_server and not competition:
         server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless,
                                            server_executable=str(server_executable))
 
     client_executable = bin_path / f'client{executable_suffix}'
-    with ProcessPoolExecutor(max_workers=clients) as executor:
-        list(executor.map(run_client, [(i, seed, str(client_executable)) for i in range(clients)]))
-    if server:
-        server.kill()
+    if not competition:
+        with ProcessPoolExecutor(max_workers=clients) as executor:
+            list(executor.map(run_client, [(i, seed, str(client_executable)) for i in range(clients)]))
+    else:
+        with ProcessPoolExecutor(max_workers=1) as executor:
+            args = (client_executable, competition_server, seed)
+            list(executor.map(run_competition_client, [args]))
+
+
+def run_competition_client(args: (str, str, str)) -> Optional[subprocess.Popen]:
+    executable_path, server_host, seed = args
+    name = 'Penguballs'
+    auth_port = 4000
+    client_port = 5002
+    grpc_port = 50052
+    client = util.start_client_process(
+        executable=executable_path,
+        server_host=server_host,
+        auth_port=auth_port,
+        client_port=client_port,
+        grpc_port=grpc_port,
+        seed=seed,
+        player_name=name,
+        low_gpu=True
+    )
+    bot = marble_client.MarbleClient(
+        host='localhost',
+        port=grpc_port,
+        screen_dir='raw_screens_competition',
+        name=name)
+
+    try:
+        bot.run_interaction_loop()
+    finally:
+        if client is not None:
+            logger.info("Kill competition client")
+            client.kill()
 
 
 def run_client(args: (int, int, str)) -> Optional[subprocess.Popen]:

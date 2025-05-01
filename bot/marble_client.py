@@ -8,6 +8,8 @@ import numpy as np
 import math
 import torch.nn as nn
 import torch
+import cv2 as cv
+from PIL import Image
 
 # Note: You need to generate the Python protobuf files from your .proto file first.
 # Run the following command in your terminal in the directory containing marble.proto:
@@ -50,7 +52,7 @@ class MarbleClient:
         self.stub = service_pb2_grpc.MarbleServiceStub(self.channel)
         # List to store (state, input) tuples recorded during the loop
         self.records = []
-        self.initial_push = True
+        self.initial_push = False
         self.initial_push_times = 0
         self.screen_dir = screen_dir
         os.makedirs(self.screen_dir, exist_ok=True)  # Ensure the directory exists
@@ -66,6 +68,11 @@ class MarbleClient:
         try:
             request = service_pb2.GetStateRequest()
             response = self.stub.GetState(request)
+            
+            if not response.screen:
+                print("Warning: 'screen' field is missing or empty.")
+                response.screen = b''  # Set default to empty byte array
+            
             return response
         except grpc.RpcError as e:
             print(f"Error calling GetState: {e}")
@@ -103,6 +110,16 @@ class MarbleClient:
             You should implement your logic here to decide the input based
             on the provided state information (e.g., screen data, velocity).
         """
+        if state.screen == None or len(state.screen) == 0:
+            return
+        
+        
+        image_features = self.estimate_ball_position_with_shadow(state.screen)
+        
+        ball_status = 1 if image_features['ball_status'] == 'off_track' else 2 if image_features['ball_status'] == 'on_track' else 3
+        ball_x, ball_y, ball_z = image_features['ball_position']
+        track_r, track_l = image_features['track_walls']
+        
         vec = [
             state.linear_velocity.x,
             state.linear_velocity.y,
@@ -112,18 +129,29 @@ class MarbleClient:
             state.angular_velocity.z,
             state.relative_angular_velocity.x,
             state.relative_angular_velocity.y,
-            state.relative_angular_velocity.z
+            state.relative_angular_velocity.z,
+            ball_status,
+            ball_x,
+            ball_y,
+            ball_z,
+            track_l,
+            track_r,
+            image_features['shadow_distance']
         ]
         input_tensor = torch.tensor(vec, dtype=torch.float32)
 
         # Get the neural network's prediction
         output = self.model(input_tensor)
         
+        # print(f"Output neural network: {output}")
+        
         forward = self.initial_push or output[0].item() > 0.5
         if self.initial_push_times < 5:
             self.initial_push_times += 1
         else:
             self.initial_push = False
+        
+        time.sleep(0.5)
         
         # Map the network output to the InputRequest
         return service_pb2.InputRequest(
@@ -169,7 +197,7 @@ class MarbleClient:
                 'results': current_state.results,
             }
             # with open(screen_file, 'wb') as f:
-            #     f.write(current_state.screen)
+            #      f.write(current_state.screen)
 
             self.records.append((recorded_state, input_to_send))
             if current_state.finished:
@@ -242,3 +270,158 @@ class MarbleClient:
         if self.channel:
             self.channel.close()
             print("gRPC channel closed.")
+    
+    @staticmethod
+    def extract_frame(screen_bytes, widht=800, height=600):
+        # image = Image.open(BytesIO(screen_bytes), formats=['png'])
+        image = Image.frombytes('RGBA', (widht, height), screen_bytes)
+        frame = np.array(image)
+        frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)
+        return frame
+    
+    def estimate_ball_position_with_shadow(self, screen_bytes,
+                                           ball_hsv_low=np.array([5, 80, 80]),
+                                           ball_hsv_high=np.array([25, 255, 255]),
+                                           kernel_size=9,
+                                           min_peak_distance=100,
+                                           canny_threshold1=50,
+                                           canny_threshold2=100,
+                                           shadow_threshold=50):
+
+        """
+        Estimates ball position using shadow detection as an additional cue for height.
+        """
+
+        # Load the image
+        img_bgr = self.extract_frame(screen_bytes)
+        img_rgb = cv.cvtColor(img_bgr, cv.COLOR_BGR2RGB)
+        gray = cv.cvtColor(img_bgr, cv.COLOR_BGR2GRAY)
+        h, w = img_bgr.shape[:2]
+
+        # Detect the ball (same as before)
+        hsv = cv.cvtColor(img_bgr, cv.COLOR_BGR2HSV)
+        mask = cv.inRange(hsv, ball_hsv_low, ball_hsv_high)
+        kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (kernel_size, kernel_size))
+        mask_clean = cv.morphologyEx(mask, cv.MORPH_OPEN, kernel)
+        contours, _ = cv.findContours(mask_clean, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+        ball_found = False
+        cx_ball, cy_ball, r_ball = 0, 0, 0
+
+        # Create visualization
+        overlay = img_rgb.copy()
+
+        # Find track walls using edge detection
+        edges = cv.Canny(gray, canny_threshold1, canny_threshold2)
+        col_sum = edges.sum(axis=0)
+        peaks = np.argsort(col_sum)[::-1]
+        x1 = peaks[0]
+        x2 = next(idx for idx in peaks if abs(idx - x1) > min_peak_distance)
+        if x1 > x2:
+            x1, x2 = x2, x1
+        cx_track = (x1 + x2) // 2
+
+        # Draw track walls
+        cv.line(overlay, (x1, 0), (x1, h), (0, 255, 0), 2)  # left wall
+        cv.line(overlay, (x2, 0), (x2, h), (0, 255, 0), 2)  # right wall
+        cv.line(overlay, (cx_track, 0), (cx_track, h), (255, 0, 255), 2)  # centerline
+
+        # Variables to store classification results
+        ball_status = "unknown"
+        status = "Ball not found"
+        shadow_distance = 0
+        shadow_found = False
+
+        if contours:
+            ball_found = True
+            largest = max(contours, key=cv.contourArea)
+            (cx_ball, cy_ball), r_ball = cv.minEnclosingCircle(largest)
+            cx_ball, cy_ball, r_ball = int(cx_ball), int(cy_ball), int(r_ball)
+
+            cv.circle(overlay, (cx_ball, cy_ball), r_ball, (255, 0, 0), 3)
+
+            # Check if ball is between track walls
+            within_walls = (x1 <= cx_ball <= x2)
+
+            # Look for shadow below the ball
+            # Define region of interest for shadow detection
+            shadow_roi_top = cy_ball + r_ball  # Start from bottom of ball
+            shadow_roi_bottom = min(h, shadow_roi_top + int(r_ball * 3))  # Look up to 3*radius below
+            shadow_roi_left = max(0, cx_ball - int(r_ball * 2))
+            shadow_roi_right = min(w, cx_ball + int(r_ball * 2))
+
+            shadow_roi = gray[shadow_roi_top:shadow_roi_bottom,
+                         shadow_roi_left:shadow_roi_right]
+
+            if shadow_roi.size > 0:
+                # Threshold to find dark areas (potential shadows)
+                _, shadow_mask = cv.threshold(shadow_roi, shadow_threshold, 255,
+                                              cv.THRESH_BINARY_INV)
+
+                # Find contours in the shadow mask
+                shadow_contours, _ = cv.findContours(shadow_mask,
+                                                     cv.RETR_EXTERNAL,
+                                                     cv.CHAIN_APPROX_SIMPLE)
+
+                # Draw the shadow ROI on the overlay
+                cv.rectangle(overlay,
+                             (shadow_roi_left, shadow_roi_top),
+                             (shadow_roi_right, shadow_roi_bottom),
+                             (0, 255, 255), 1)
+
+                if shadow_contours:
+                    # Find the largest dark area which is likely to be the shadow
+                    shadow_contour = max(shadow_contours, key=cv.contourArea)
+
+                    if cv.contourArea(shadow_contour) > (r_ball * r_ball * 0.2):  # Min shadow size
+                        shadow_found = True
+                        # Get shadow bounding box and center
+                        x, y, w_s, h_s = cv.boundingRect(shadow_contour)
+                        shadow_cy = y + h_s // 2 + shadow_roi_top
+                        shadow_cx = x + w_s // 2 + shadow_roi_left
+
+                        # Draw shadow contour and center
+                        cv.drawContours(overlay, [shadow_contour], -1, (0, 0, 255), 2,
+                                        offset=(shadow_roi_left, shadow_roi_top))
+                        cv.circle(overlay, (shadow_cx, shadow_cy), 3, (0, 0, 255), -1)
+
+                        # Calculate distance between ball bottom and shadow
+                        ball_bottom = cy_ball + r_ball
+                        shadow_distance = shadow_cy - ball_bottom
+
+                        # Draw a line connecting ball bottom to shadow
+                        cv.line(overlay, (cx_ball, ball_bottom),
+                                (shadow_cx, shadow_cy), (255, 255, 0), 2)
+
+                        # Add shadow distance information
+                        cv.putText(overlay, f"Shadow dist: {shadow_distance}px",
+                                   (10, 60), cv.FONT_HERSHEY_SIMPLEX, 0.7,
+                                   (255, 255, 255), 2)
+
+            # Classification with shadow information
+            if not within_walls:
+                status = "Ball out of track"
+                ball_status = "out"
+            elif shadow_found:
+                if shadow_distance < r_ball * 1.2:
+                    status = "Ball on track (shadow close)"
+                    ball_status = "on_track"
+                else:
+                    status = f"Ball above track (shadow dist: {shadow_distance}px)"
+                    ball_status = "off_track"
+            else:
+                # No shadow found - could be very high or lighting issue
+                status = "Ball likely off track (no shadow)"
+                ball_status = "likely_off_track"
+
+        return {
+            'ball_status': ball_status,
+            'ball_found': ball_found,
+            'ball_position': (cx_ball, cy_ball, r_ball) if ball_found else (0,0,0),
+            'shadow_found': shadow_found,
+            'shadow_distance': shadow_distance if shadow_found else -50,
+            'track_walls': (x1, x2),
+            'track_center': cx_track,
+            'status': status,
+            'visualization': overlay
+        }

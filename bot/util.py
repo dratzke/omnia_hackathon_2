@@ -14,8 +14,8 @@ import tqdm
 def save_images_from_dataframe(
         df: pd.DataFrame,
         output_dir: str,
-        width: int = 1280,
-        height: int = 720,
+        width: int = 800,
+        height: int = 600,
         prefix: str = 'image_'
 ) -> None:
     """

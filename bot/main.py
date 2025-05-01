@@ -43,18 +43,18 @@ population_size = 10
 @click.option('--game-seconds', default=30, help='Time the game runs until a winner is declared')
 @click.option('--seed', default=1234, help='Seed for the game world generation')
 @click.option('--random-seed', default=False, is_flag=True, help='Random seed')
-@click.option('--generation-start', default=1, help='Generation')
+@click.option('--generation', default=0, help='Generation base')
 @click.option('--train', default=False, is_flag=True, help='Training mode')
 @click.option('--server-headless', default=False, is_flag=True, help='Run the server in headless mode')
 @click.option('--bin-path', default='../release/latest', help='Path to binaries')
-def run(no_server: bool, clients: int, game_seconds: int, seed: int, random_seed: bool, generation_start: int, train: bool, server_headless: bool, bin_path: str):
+def run(no_server: bool, clients: int, game_seconds: int, seed: int, random_seed: bool, generation: int, train: bool, server_headless: bool, bin_path: str):
     if isinstance(bin_path, str):
         bin_path = Path(bin_path)
     executable_suffix = '.exe' if os.name == 'nt' else ''
     server_executable = bin_path / f'server{executable_suffix}' 
     client_executable = bin_path / f'client{executable_suffix}'
     
-    population = initialize_population(clients, generation_start, train)
+    population = initialize_population(clients, generation, train)
     if not train:
         server = util.start_server_process(4000, 5000, clients, game_seconds, seed, False, server_headless,
                                                 server_executable=str(server_executable))
@@ -70,8 +70,8 @@ def run(no_server: bool, clients: int, game_seconds: int, seed: int, random_seed
         time.sleep(1)
     else:
         
-        for generation in range(num_generations):
-            current_generation = generation + generation_start
+        for generation_num in range(num_generations):
+            current_generation = generation_num + generation + 1
             current_seed = current_generation if random_seed else seed
             if not no_server:
                 server = util.start_server_process(4000, 5000, clients, game_seconds, current_seed, False, server_headless,
@@ -182,10 +182,10 @@ def initialize_population(population_size, generation, train):
     population = []
     for i in range(population_size):
         model = MarbleNeuralNetwork() 
-        if train:
-            checkpoint = torch.load(f"model-generation{generation + 1}.pth", weights_only=True)
+        if train and generation > 0:
+            checkpoint = torch.load(f"model-generation{generation}.pth", weights_only=True)
             model.load_state_dict(checkpoint)
-        else:
+        elif not train and generation > 0:
             checkpoint = torch.load(f"model-generation{generation}.pth", weights_only=True)
             model.load_state_dict(checkpoint)
             

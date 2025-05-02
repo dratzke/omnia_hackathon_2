@@ -13,6 +13,7 @@ import tqdm
 
 logger = logging.getLogger(__name__)
 
+
 def save_images_from_dataframe(
         df: pd.DataFrame,
         output_dir: str,
@@ -154,7 +155,7 @@ def start_client_process(
             stderr=subprocess.DEVNULL,
         )
         time.sleep(2)
-        logger.debug(f"Started server process with PID: {process.pid}")
+        logger.debug(f"Started client process with PID: {process.pid}")
         logger.debug(f"Command: {' '.join(shlex.quote(arg) for arg in command)}")
         return process
     except FileNotFoundError:

@@ -70,6 +70,12 @@ run-both-one: build
     pkill -F server.pid
     rm server.pid
 
+run-server: build
+    # Start server in background, save PID, wait 5s, run client, then kill server
+    cp -r assets ./target/release/
+    ./target/release/server --auth-port 4000 --game-port 5000 --players 1 --max-game-seconds 20 --seed 143532 & 
+    echo $$ > server.pid 
+
 
 run-both-one-low: build
     # Start server in background, save PID, wait 5s, run client, then kill server

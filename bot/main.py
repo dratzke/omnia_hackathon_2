@@ -9,8 +9,10 @@ import subprocess
 from typing import Optional
 from concurrent.futures import ProcessPoolExecutor
 
+log_level = logging.DEBUG
+
 # Import the generated modules
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=log_level, format='%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
 
 
 class SafeFormatter(logging.Formatter):
@@ -26,7 +28,7 @@ handler = logging.StreamHandler()
 logger = logging.getLogger()
 logger.handlers.clear()
 logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logger.setLevel(log_level)
 
 
 @click.command()
@@ -49,14 +51,20 @@ def run(
         competition_server: str
 ):
     if not no_server and not competition:
-        util.start_server_process(auth_port=4000, game_port=5000, players=clients, max_game_seconds=game_seconds,
-                                  seed=seed, low_gpu=False, headless=server_headless,
-                                  server_executable=build_executable(bin_path, 'server'))
+        util.start_server_process(
+            auth_port=4000,
+            game_port=5000,
+            players=clients,
+            max_game_seconds=game_seconds,
+            seed=seed,
+            low_gpu=True,
+            headless=server_headless,
+            server_executable=build_executable(bin_path, 'server'))
 
     client_executable = build_executable(bin_path, 'client')
     if not competition:
         with ProcessPoolExecutor(max_workers=clients) as executor:
-            list(executor.map(run_client, [(i, seed, client_executable) for i in range(clients)]))
+            list(executor.map(run_local_client, [(i, seed, client_executable) for i in range(clients)]))
     else:
         with ProcessPoolExecutor(max_workers=1) as executor:
             args = (client_executable, competition_server, seed)
@@ -100,24 +108,27 @@ def run_competition_client(args: (str, str, str)) -> Optional[subprocess.Popen]:
             client.kill()
 
 
-def run_client(args: (int, int, str)) -> Optional[subprocess.Popen]:
+def run_local_client(args: (int, int, str)) -> Optional[subprocess.Popen]:
     client_id, seed, executable_path = args
     name = 'A' + str(client_id)
-    client_port = 5001 + client_id
+    server_host = 'localhost'
+    auth_port = 4000
+    client_port = 5000 + client_id
+    grpc_port = 50050 + client_id
 
     client = util.start_client_process(
-        auth_port=4000,
-        server_host='127.0.0.1',
-        client_port=5001 + client_id,
+        auth_port=auth_port,
+        server_host=server_host,
+        client_port=client_port,
         player_name=name,
-        grpc_port=50053 + client_id,
+        grpc_port=grpc_port,
         seed=seed,
-        low_gpu=False,
+        low_gpu=True,
         executable=executable_path)
 
     bot = marble_client.MarbleClient(
         host='localhost',
-        port=50051 + client_id,
+        port=grpc_port,
         screen_dir='raw_screens_' + str(client_id),
         name=name)
     try:

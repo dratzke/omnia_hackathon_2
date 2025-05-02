@@ -51,13 +51,14 @@ def run(
         competition_server: str
 ):
     if not no_server and not competition:
+        logger.debug(f"Start local game server for {clients} player(s)")
         util.start_server_process(
             auth_port=4000,
             game_port=5000,
             players=clients,
             max_game_seconds=game_seconds,
             seed=seed,
-            low_gpu=True,
+            low_gpu=False,
             headless=server_headless,
             server_executable=build_executable(bin_path, 'server'))
 
@@ -82,8 +83,8 @@ def run_competition_client(args: (str, str, str)) -> Optional[subprocess.Popen]:
     executable_path, server_host, seed = args
     name = 'Penguballs'
     auth_port = 4000
-    client_port = 5002
-    grpc_port = 50052
+    client_port = 5001
+    grpc_port = 50051
     client = util.start_client_process(
         executable=executable_path,
         server_host=server_host,
@@ -92,11 +93,11 @@ def run_competition_client(args: (str, str, str)) -> Optional[subprocess.Popen]:
         grpc_port=grpc_port,
         seed=seed,
         player_name=name,
-        low_gpu=True
+        low_gpu=False
     )
     bot = marble_client.MarbleClient(
         host='localhost',
-        port=grpc_port,
+        port=str(grpc_port),
         screen_dir='raw_screens_competition',
         name=name)
 
@@ -109,40 +110,42 @@ def run_competition_client(args: (str, str, str)) -> Optional[subprocess.Popen]:
 
 
 def run_local_client(args: (int, int, str)) -> Optional[subprocess.Popen]:
+    """
+    Runs and connects to local game server. Please use 'run_competition_client' to connect to non-local game server
+    """
     client_id, seed, executable_path = args
     name = 'A' + str(client_id)
-    server_host = 'localhost'
     auth_port = 4000
-    client_port = 5000 + client_id
-    grpc_port = 50050 + client_id
+    client_port = 5001 + client_id
+    grpc_port = 50051 + client_id
 
     client = util.start_client_process(
         auth_port=auth_port,
-        server_host=server_host,
+        server_host='127.0.0.1',
         client_port=client_port,
         player_name=name,
         grpc_port=grpc_port,
         seed=seed,
-        low_gpu=True,
+        low_gpu=False,
         executable=executable_path)
 
     bot = marble_client.MarbleClient(
         host='localhost',
-        port=grpc_port,
+        port=str(grpc_port),
         screen_dir='raw_screens_' + str(client_id),
         name=name)
     try:
         bot.run_interaction_loop()
     finally:
         df = bot.get_records_as_dataframe()
+        logger.debug(f"Store {len(df)} state records")
         df.to_parquet(f'marble_client_records_{client_id}.parquet', index=False)
         util.save_images_from_dataframe(df, f'output_images_{client_id}')
-
-    if client:
-        client.kill()
-        logger.info(f'Client {client.pid} killed')
-    else:
-        logger.error('Client process failed to start or was None')
+        if client:
+            client.kill()
+            logger.info(f'Client {client.pid} killed')
+        else:
+            logger.error('Client process failed to start or was None')
 
 
 if __name__ == '__main__':

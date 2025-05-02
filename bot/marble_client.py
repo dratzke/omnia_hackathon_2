@@ -21,6 +21,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
 class MarbleClient:
     """
     A gRPC client for interacting with the MarbleService.
@@ -30,7 +31,7 @@ class MarbleClient:
     in a pandas DataFrame.
     """
 
-    def __init__(self, host: str, port: int, screen_dir: str, name: str):
+    def __init__(self, host: str, port: str, screen_dir: str, name: str):
         """
         Initializes the MarbleClient.
 
@@ -103,12 +104,11 @@ class MarbleClient:
         current_speed = math.sqrt(lv.x ** 2 + lv.y ** 2 + lv.z ** 2)
 
         logger.debug(f"Current Speed: {current_speed} m/s - Linear Velocity: X: {lv.x} Y: {lv.y} Z: {lv.z}")
-        
+
         # Define your desired average speed
         TARGET_SPEED = 10.0  # m/s, adjust this as you like
         SPEED_TOLERANCE = 0.5  # m/s, how much deviation we allow
-        
-        
+
         # Initialize controls
         forward = False
         back = False
@@ -141,19 +141,20 @@ class MarbleClient:
         Runs a loop that repeatedly gets state, determines input, sends input,
         and records the state/input pair.
 
-        Args:
-            iterations: The number of times to run the get_state/send_input cycle.
         """
         while True:
+            logger.debug("Getting state")
             current_state = self.get_state()
             if current_state is None:
                 logger.debug("Failed to get state, stopping loop.")
                 break
 
             # 2. Determine the input based on the state
+            logger.debug(f"Evaluate decision")
             input_to_send = self.decision(current_state)
 
             # 3. Send the input
+            logger.debug(f"Made decision.Sending input: {input_to_send}")
             response = self.send_input(input_to_send)
             if response is None:
                 logger.debug("Failed to send input, stopping loop.")
@@ -179,8 +180,8 @@ class MarbleClient:
                     if result.name == self.name:
                         # Assuming result.name is a string, adjust as necessary
                         logger.debug(f"Result {index}: {result.name}, Finish Time: {result.finish_time}, "
-                              f"Last Touched Road ID: {result.last_touched_road_id}, "
-                              f"Last Touched Road Time: {result.last_touched_road_time}")
+                                     f"Last Touched Road ID: {result.last_touched_road_id}, "
+                                     f"Last Touched Road Time: {result.last_touched_road_time}")
                 logger.debug("Marble finished, stopping loop.")
                 break
 
